@@ -93,6 +93,9 @@ void Simulation::createSolvers() {
 		case Solver::Type::MNA:
 			createMNASolver<VarType>();
 			break;
+		case Solver::Type::SSN:
+			createSSNSolver<VarType>();
+			break;
 #ifdef WITH_SUNDIALS
 		case Solver::Type::DAE:
 			solver = std::make_shared<DAESolver>(**mName, mSystem, **mTimeStep, 0.0);

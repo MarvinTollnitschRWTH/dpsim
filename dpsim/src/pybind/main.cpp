@@ -202,6 +202,7 @@ PYBIND11_MODULE(dpsimpy, m) {
 
 	py::enum_<DPsim::Solver::Type>(m, "Solver")
 		.value("MNA", DPsim::Solver::Type::MNA)
+		.value("SSN", DPsim::Solver::Type::SSN)
 		.value("DAE", DPsim::Solver::Type::DAE)
 		.value("NRP", DPsim::Solver::Type::NRP);
 

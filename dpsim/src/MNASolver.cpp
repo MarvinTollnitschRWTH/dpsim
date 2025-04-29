@@ -336,7 +336,6 @@ template <typename VarType> void MnaSolver<VarType>::identifyTopologyObjects() {
       if (mnaComp)
         mMNAIntfSwitches.push_back(mnaComp);
     }
-
     auto varComp =
         std::dynamic_pointer_cast<CPS::MNAVariableCompInterface>(comp);
     if (varComp) {

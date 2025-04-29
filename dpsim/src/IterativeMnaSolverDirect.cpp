@@ -81,7 +81,7 @@ void IterativeMnaSolverDirect<VarType>::solveWithSystemMatrixRecomputation(
     //	mDirectLinearSolvers.solve takes a Matrix reference,
     //	thus we need a temporary variable as an argument
     Matrix temp = (this->mRightSideVector) -
-                  ((this->mBaseSystemMatrix) * (**(this->mLeftSideVector)) +
+                  ((this->mVariableSystemMatrix) * (**(this->mLeftSideVector)) +
                    mNonlinearFunctionResult);
     mLeftStep = mDirectLinearSolverVariableSystemMatrix->solve(temp);
 
@@ -146,6 +146,9 @@ void IterativeMnaSolverDirect<VarType>::solveWithSystemMatrixRecomputation(
     }
     iterations++;
   } while (!isConverged && iterations < 100);
+      std::cout << mVariableSystemMatrix << std::endl;
+                std::cout << **(this->mLeftSideVector) << std::endl;
+              std::cout << mRightSideVector << std::endl;
   /// TODO: split into separate task?
   //(dependent on x, updating all v attributes)
   for (UInt nodeIdx = 0; nodeIdx < this->mNumNetNodes; ++nodeIdx)

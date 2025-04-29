@@ -117,7 +117,7 @@ void EMT::Ph1::ExponentialDiode::mnaCompPostStep(
 void EMT::Ph1::ExponentialDiode::mnaCompUpdateVoltage(
     const Matrix &leftVector) {
   // v0 - v1, anode to cathode
-  **mIntfVoltage = Matrix::Zero(3, 1);
+  (**mIntfVoltage)(0,0) = 0.;
   if (terminalNotGrounded(0)) {
     (**mIntfVoltage)(0, 0) =
         Math::realFromVectorElement(leftVector, matrixNodeIndex(0, 0));
@@ -137,6 +137,7 @@ void EMT::Ph1::ExponentialDiode::mnaCompUpdateCurrent(
 
 void EMT::Ph1::ExponentialDiode::iterationUpdate(const Matrix &leftVector) {
   //Update phase voltages
+  (**mIntfVoltage)(0, 0) = 0.;
   if (terminalNotGrounded(1)) {
     (**mIntfVoltage)(0, 0) =
         Math::realFromVectorElement(leftVector, matrixNodeIndex(1, 0));
@@ -146,9 +147,9 @@ void EMT::Ph1::ExponentialDiode::iterationUpdate(const Matrix &leftVector) {
         (**mIntfVoltage)(0, 0) -
         Math::realFromVectorElement(leftVector, matrixNodeIndex(0, 0));
   }
-
+  std::cout << leftVector << std::endl;
   calculateNonlinearFunctionResult();
-
+  std::cout << **mIntfVoltage << std::endl;
   updateJacobian();
 }
 
@@ -170,4 +171,5 @@ void EMT::Ph1::ExponentialDiode::calculateNonlinearFunctionResult() {
 void EMT::Ph1::ExponentialDiode::updateJacobian() {
   Jacobian(0, 0) =
       (**mI_S / (**mV_T)) * expf((**mIntfVoltage)(0, 0) / (**mV_T));
+      std::cout << Jacobian(0,0) << std::endl << std::endl;
 }

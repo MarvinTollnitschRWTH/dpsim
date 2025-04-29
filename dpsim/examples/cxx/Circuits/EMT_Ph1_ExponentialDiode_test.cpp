@@ -12,18 +12,20 @@ void EMT_Ph1_ExponentialDiode() {
   Logger::setLogDir("logs/" + simName);
 
   // Nodes
+  //Real initialVoltage_n1 = 1.0;
+  //Real initialVoltage_n2 = 0.4;
   auto n1 = SimNode::make("n1", PhaseType::Single);
-  auto n2 = SimNode::make("n1", PhaseType::Single);
+  auto n2 = SimNode::make("n2", PhaseType::Single);
 
   // Components
 
-  auto vs0 = Ph1::VoltageSource::make("vs0");
+  auto vs0 = Ph1::VoltageSource::make("vs0", Logger::Level::debug);
   vs0->setParameters(CPS::Complex(1., 0.), 50.0);
 
-  auto load = CPS::EMT::Ph1::Resistor::make("Load");
+  auto load = CPS::EMT::Ph1::Resistor::make("Load", Logger::Level::debug);
   load->setParameters(10.);
 
-  auto expDiode = Ph1::ExponentialDiode::make("ExponentialDiode");
+  auto expDiode = Ph1::ExponentialDiode::make("ExponentialDiode", Logger::Level::debug);
   expDiode->setParameters(
       1.0e-12, 25.852e-3); //Calling this is optional. If this method call
                         //is omitted, the diode will get the following
@@ -31,16 +33,16 @@ void EMT_Ph1_ExponentialDiode() {
                         //I_S = 1.0e-12 (A) and V_T = 25.852e-3 (V).
 
   // Topology
-  load->connect(SimNode::List{n1, n2});
+  vs0->connect(SimNode::List{SimNode::GND, n1});
 
-  expDiode->connect(SimNode::List{n2, SimNode::GND}); //Connect diode in the
+  load->connect(SimNode::List{n1, SimNode::GND});
+
+  expDiode->connect(SimNode::List{n1, n2}); //Connect diode in the
                                                       //forward direction, i.e.
                                                       //from anode (+) to
                                                       //cathode (-)
                                                       //Diode Equation:
   //I_D = (**mI_S) * (expf((**mIntfVoltage)(0, 0) / (**mV_T)) - 1.)
-
-  vs0->connect(SimNode::List{SimNode::GND, n1});
 
   // Define system topology
   auto sys = SystemTopology(50, SystemNodeList{n1, n2},
@@ -50,8 +52,9 @@ void EMT_Ph1_ExponentialDiode() {
   auto logger = DataLogger::make(simName);
   logger->logAttribute("I_ExponentialDiode", expDiode->attribute("i_intf"));
   logger->logAttribute("V_ExponentialDiode", expDiode->attribute("v_intf"));
+  logger->logAttribute("I_Load", load->attribute("i_intf"));
 
-  Simulation sim(simName, Logger::Level::info);
+  Simulation sim(simName, Logger::Level::debug);
   sim.doInitFromNodesAndTerminals(false);
   sim.setSystem(sys);
   sim.addLogger(logger);

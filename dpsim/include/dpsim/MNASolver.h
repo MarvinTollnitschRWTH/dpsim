@@ -21,6 +21,7 @@
 #include <dpsim-models/Solver/MNASwitchInterface.h>
 #include <dpsim-models/Solver/MNASyncGenInterface.h>
 #include <dpsim-models/Solver/MNAVariableCompInterface.h>
+#include <dpsim-models/Solver/MNANonlinearVariableCompInterface.h>
 #include <dpsim/Config.h>
 #include <dpsim/DataLogger.h>
 #include <dpsim/Solver.h>

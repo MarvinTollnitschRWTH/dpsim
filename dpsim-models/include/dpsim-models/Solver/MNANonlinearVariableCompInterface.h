@@ -16,7 +16,7 @@ namespace CPS {
 /// MNA interface to be used by nonlinear elements that require recomputing
 //	of the system matrix
 class MNANonlinearVariableCompInterface
-    : virtual public MNAVariableCompInterface {
+    : public MNAVariableCompInterface {
 public:
   typedef std::shared_ptr<MNANonlinearVariableCompInterface> NonlinearPtr;
   typedef std::vector<NonlinearPtr> NonlinearList;

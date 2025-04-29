@@ -10,7 +10,6 @@
 
 #include <dpsim-models/MNASimPowerComp.h>
 #include <dpsim-models/Solver/MNAInterface.h>
-//#include <dpsim-models/Solver/MNAVariableCompInterface.h>
 #include <dpsim-models/Solver/MNANonlinearVariableCompInterface.h>
 
 namespace CPS {
@@ -18,8 +17,8 @@ namespace EMT {
 namespace Ph1 {
 /// EMT ExponentialDiode using the Shockley ideal diode equation
 class ExponentialDiode : public MNASimPowerComp<Real>,
-                         public SharedFactory<ExponentialDiode>,
-                         public MNANonlinearVariableCompInterface {
+                         public MNANonlinearVariableCompInterface,
+                         public SharedFactory<ExponentialDiode> {
 protected:
   Matrix Jacobian = Matrix::Zero(1, 1);
 

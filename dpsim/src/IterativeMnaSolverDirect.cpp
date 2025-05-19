@@ -145,10 +145,12 @@ void IterativeMnaSolverDirect<VarType>::solveWithSystemMatrixRecomputation(
       }
     }
     iterations++;
-  } while (!isConverged && iterations < 100);
+  } while (!isConverged && iterations < 10);
       std::cout << mVariableSystemMatrix << std::endl;
-                std::cout << **(this->mLeftSideVector) << std::endl;
-              std::cout << mRightSideVector << std::endl;
+      std::cout << **(this->mLeftSideVector) << std::endl;
+      std::cout << mRightSideVector << std::endl;
+      std::cout << mNonlinearFunctionResult << std::endl;
+
   /// TODO: split into separate task?
   //(dependent on x, updating all v attributes)
   for (UInt nodeIdx = 0; nodeIdx < this->mNumNetNodes; ++nodeIdx)

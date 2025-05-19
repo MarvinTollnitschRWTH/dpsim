@@ -39,12 +39,16 @@ void EMT::Ph1::ExponentialDiode::initializeFromNodesAndTerminals(
 
   // IntfVoltage initialization for each phase
   MatrixComp vInitABC = Matrix::Zero(1, 1);
-  vInitABC(0, 0) = RMS3PH_TO_PEAK1PH * initialSingleVoltage(1) -
-                   RMS3PH_TO_PEAK1PH * initialSingleVoltage(0);
+  vInitABC(0, 0) = initialSingleVoltage(0) -
+                   initialSingleVoltage(1);
   (**mIntfVoltage)(0, 0) = vInitABC(0, 0).real();
 
   (**mIntfCurrent)(0, 0) =
       (**mI_S) * (expf((**mIntfVoltage)(0, 0) / (**mV_T)) - 1.);
+
+      std::cout << "Jacobian: " << Jacobian(0,0) << std::endl << std::endl;
+      std::cout << "IntfV:" << (**mIntfVoltage)(0,0) << std::endl << std::endl;
+      std::cout << "IntfI: " << (**mIntfCurrent)(0,0) << std::endl << std::endl;
 
   SPDLOG_LOGGER_INFO(mSLog,
                      "\n--- Initialization from powerflow ---"
@@ -100,8 +104,8 @@ void EMT::Ph1::ExponentialDiode::mnaCompAddPostStepDependencies(
     AttributeBase::List &modifiedAttributes,
     Attribute<Matrix>::Ptr &leftVector) {
   attributeDependencies.push_back(leftVector);
-  modifiedAttributes.push_back(attribute("v_intf"));
-  modifiedAttributes.push_back(attribute("i_intf"));
+  modifiedAttributes.push_back(mIntfVoltage);
+  modifiedAttributes.push_back(mIntfCurrent);
 }
 
 void EMT::Ph1::ExponentialDiode::mnaCompPreStep(Real time, Int timeStepCount) {
@@ -138,18 +142,18 @@ void EMT::Ph1::ExponentialDiode::mnaCompUpdateCurrent(
 void EMT::Ph1::ExponentialDiode::iterationUpdate(const Matrix &leftVector) {
   //Update phase voltages
   (**mIntfVoltage)(0, 0) = 0.;
-  if (terminalNotGrounded(1)) {
-    (**mIntfVoltage)(0, 0) =
-        Math::realFromVectorElement(leftVector, matrixNodeIndex(1, 0));
-  }
   if (terminalNotGrounded(0)) {
     (**mIntfVoltage)(0, 0) =
-        (**mIntfVoltage)(0, 0) -
         Math::realFromVectorElement(leftVector, matrixNodeIndex(0, 0));
   }
-  std::cout << leftVector << std::endl;
+  if (terminalNotGrounded(1)) {
+    (**mIntfVoltage)(0, 0) =
+        (**mIntfVoltage)(0, 0) -
+        Math::realFromVectorElement(leftVector, matrixNodeIndex(1, 0));
+  }
+  //std::cout << leftVector << std::endl;
   calculateNonlinearFunctionResult();
-  std::cout << **mIntfVoltage << std::endl;
+  //std::cout << **mIntfVoltage << std::endl;
   updateJacobian();
 }
 
@@ -171,5 +175,8 @@ void EMT::Ph1::ExponentialDiode::calculateNonlinearFunctionResult() {
 void EMT::Ph1::ExponentialDiode::updateJacobian() {
   Jacobian(0, 0) =
       (**mI_S / (**mV_T)) * expf((**mIntfVoltage)(0, 0) / (**mV_T));
-      std::cout << Jacobian(0,0) << std::endl << std::endl;
+      //std::cout << "Jacobian: " << Jacobian(0,0) << std::endl << std::endl;
+      //std::cout << "IntfV:" << (**mIntfVoltage)(0,0) << std::endl << std::endl;
+      //std::cout << "IntfI:" << (**mIntfCurrent)(0,0) << std::endl << std::endl;
+    
 }

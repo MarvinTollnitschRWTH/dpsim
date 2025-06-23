@@ -1,7 +1,7 @@
-Load.MnaPostStep,993
-ExponentialDiode.MnaPostStep,1071
-EMT_Ph1_ExponentialDiode_test.Write,5670
+EMT_Ph1_DummyTest.Solve,241108
+EMT_Ph1_DummyTest.Write,4775
 vs0.MnaPostStep,0
-EMT_Ph1_ExponentialDiode_test.Solve,148010
-vs0.MnaPreStep,1099
+r1.MnaPostStep,0
+DummyRes.MnaPostStep,1002
+vs0.MnaPreStep,1264
 Root,0

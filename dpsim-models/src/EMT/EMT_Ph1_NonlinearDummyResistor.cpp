@@ -1,0 +1,118 @@
+/* Copyright 2017-2021 Institute for Automation of Complex Power Systems,
+ *                     EONERC, RWTH Aachen University
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at https://mozilla.org/MPL/2.0/.
+ *********************************************************************************/
+
+#include <dpsim-models/EMT/EMT_Ph1_NonlinearDummyResistor.h>
+
+using namespace CPS;
+
+EMT::Ph1::NonlinearDummyResistor::NonlinearDummyResistor(String uid, String name, Logger::Level logLevel)
+    : MNASimPowerComp<Real>(uid, name, false, true, logLevel),
+      Base::Ph1::Resistor(mAttributes) {
+  setTerminalNumber(2);
+  **mIntfVoltage = Matrix::Zero(1, 1);
+  **mIntfCurrent = Matrix::Zero(1, 1);
+}
+
+SimPowerComp<Real>::Ptr EMT::Ph1::NonlinearDummyResistor::clone(String name) {
+  auto copy = NonlinearDummyResistor::make(name, mLogLevel);
+  copy->setParameters(**mResistance);
+  return copy;
+}
+
+void EMT::Ph1::NonlinearDummyResistor::initializeFromNodesAndTerminals(Real frequency) {
+  Complex voltage =
+      RMS3PH_TO_PEAK1PH * (initialSingleVoltage(1) - initialSingleVoltage(0));
+  (**mIntfVoltage)(0, 0) = voltage.real();
+  (**mIntfCurrent)(0, 0) = (**mIntfVoltage)(0, 0) / **mResistance;
+
+  SPDLOG_LOGGER_INFO(mSLog,
+                     "\n--- Initialization from powerflow ---"
+                     "\nVoltage across: {:f}"
+                     "\nCurrent: {:f}"
+                     "\nTerminal 0 voltage: {:f}"
+                     "\nTerminal 1 voltage: {:f}"
+                     "\n--- Initialization from powerflow finished ---",
+                     (**mIntfVoltage)(0, 0), (**mIntfCurrent)(0, 0),
+                     (RMS3PH_TO_PEAK1PH * initialSingleVoltage(0)).real(),
+                     (RMS3PH_TO_PEAK1PH * initialSingleVoltage(1)).real());
+  mSLog->flush();
+}
+
+void EMT::Ph1::NonlinearDummyResistor::mnaCompInitialize(Real omega, Real timeStep,
+                                           Attribute<Matrix>::Ptr leftVector) {
+  updateMatrixNodeIndices();
+  **mNonlinearFunctionStamp = Matrix::Zero(leftVector->get().rows(), 1);
+  **mRightVector = Matrix::Zero(0, 0);
+  calculateNonlinearFunctionResult();
+  updateJacobian();
+
+  mMnaTasks.push_back(std::make_shared<MnaPostStep>(*this, leftVector));
+}
+
+void EMT::Ph1::NonlinearDummyResistor::mnaCompApplySystemMatrixStamp(
+    SparseMatrixRow &systemMatrix) {
+  MNAStampUtils::stampConductance(mJacobian(0, 0), systemMatrix, matrixNodeIndex(0),
+                                  matrixNodeIndex(1), terminalNotGrounded(0),
+                                  terminalNotGrounded(1), mSLog);
+}
+
+void EMT::Ph1::NonlinearDummyResistor::mnaCompAddPostStepDependencies(
+    AttributeBase::List &prevStepDependencies,
+    AttributeBase::List &attributeDependencies,
+    AttributeBase::List &modifiedAttributes,
+    Attribute<Matrix>::Ptr &leftVector) {
+  attributeDependencies.push_back(leftVector);
+  modifiedAttributes.push_back(mIntfVoltage);
+  modifiedAttributes.push_back(mIntfCurrent);
+}
+
+void EMT::Ph1::NonlinearDummyResistor::mnaCompPostStep(Real time, Int timeStepCount,
+                                         Attribute<Matrix>::Ptr &leftVector) {
+  mnaCompUpdateVoltage(**leftVector);
+  mnaCompUpdateCurrent(**leftVector);
+}
+
+void EMT::Ph1::NonlinearDummyResistor::mnaCompUpdateVoltage(const Matrix &leftVector) {
+  // v1 - v0
+  (**mIntfVoltage)(0, 0) = 0;
+  if (terminalNotGrounded(1))
+    (**mIntfVoltage)(0, 0) =
+        Math::realFromVectorElement(leftVector, matrixNodeIndex(1));
+  if (terminalNotGrounded(0))
+    (**mIntfVoltage)(0, 0) =
+        (**mIntfVoltage)(0, 0) -
+        Math::realFromVectorElement(leftVector, matrixNodeIndex(0));
+}
+
+void EMT::Ph1::NonlinearDummyResistor::mnaCompUpdateCurrent(const Matrix &leftVector) {
+  (**mIntfCurrent)(0, 0) = (**mIntfVoltage)(0, 0) / **mResistance;
+}
+
+void EMT::Ph1::NonlinearDummyResistor::calculateNonlinearFunctionResult() {
+
+  (**mIntfCurrent)(0, 0) = (1./(**mResistance)) * (**mIntfVoltage)(0, 0);
+
+  if (terminalNotGrounded(1)) {
+    Math::setVectorElement(**mNonlinearFunctionStamp, matrixNodeIndex(1, 0),
+                           (**mIntfCurrent)(0, 0));
+  }
+  if (terminalNotGrounded(0)) {
+    Math::setVectorElement(**mNonlinearFunctionStamp, matrixNodeIndex(0, 0),
+                           -(**mIntfCurrent)(0, 0));
+  }
+}
+
+void EMT::Ph1::NonlinearDummyResistor::updateJacobian() {
+  mJacobian(0, 0) = (1./(**mResistance));
+}
+
+void EMT::Ph1::NonlinearDummyResistor::iterationUpdate(const Matrix &leftVector) {
+  mnaCompUpdateVoltage(leftVector);
+  calculateNonlinearFunctionResult();
+  updateJacobian();
+}

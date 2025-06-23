@@ -6,35 +6,31 @@
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  ******************************************************************************/
 
-#include <dpsim-models/EMT/EMT_Ph1_ExponentialDiode.h>
+#include <dpsim-models/EMT/EMT_Ph1_QuadraticResistor.h>
 
 using namespace CPS;
 
-EMT::Ph1::ExponentialDiode::ExponentialDiode(String uid, String name,
+EMT::Ph1::QuadraticResistor::QuadraticResistor(String uid, String name,
                                              Logger::Level logLevel)
     : MNASimPowerComp<Real>(uid, name, false, false, logLevel),
-      mI_S(mAttributes->create<Real>("I_S")),
-      mV_T(mAttributes->create<Real>("V_T")) {
+      mR(mAttributes->create<Real>("I_S")){
   mPhaseType = PhaseType::Single;
   setTerminalNumber(2);
-  **mI_S = 1.0e-12;
-  **mV_T = 25.852e-3;
   **mIntfVoltage = Matrix::Zero(1, 1);
   **mIntfCurrent = Matrix::Zero(1, 1);
 }
 
-void EMT::Ph1::ExponentialDiode::setParameters(Real I_S, Real V_T) {
-  **mI_S = I_S;
-  **mV_T = V_T;
+void EMT::Ph1::QuadraticResistor::setParameters(Real R) {
+  **mR = R;
 }
 
-SimPowerComp<Real>::Ptr EMT::Ph1::ExponentialDiode::clone(String name) {
-  auto copy = ExponentialDiode::make(name, mLogLevel);
-  copy->setParameters(**mI_S, **mV_T);
+SimPowerComp<Real>::Ptr EMT::Ph1::QuadraticResistor::clone(String name) {
+  auto copy = QuadraticResistor::make(name, mLogLevel);
+  copy->setParameters(**mR);
   return copy;
 }
 
-void EMT::Ph1::ExponentialDiode::initializeFromNodesAndTerminals(
+void EMT::Ph1::QuadraticResistor::initializeFromNodesAndTerminals(
     Real frequency) {
 
   // IntfVoltage initialization for each phase
@@ -44,7 +40,7 @@ void EMT::Ph1::ExponentialDiode::initializeFromNodesAndTerminals(
   (**mIntfVoltage)(0, 0) = vInitABC(0, 0).real();
 
   (**mIntfCurrent)(0, 0) =
-      (**mI_S) * (expf((**mIntfVoltage)(0, 0) / (**mV_T)) - 1.);
+      (1./(**mR)) * (**mIntfVoltage)(0, 0) * (**mIntfVoltage)(0, 0);
 
   SPDLOG_LOGGER_INFO(mSLog,
                      "\n--- Initialization from powerflow ---"
@@ -58,20 +54,18 @@ void EMT::Ph1::ExponentialDiode::initializeFromNodesAndTerminals(
                      initialSingleVoltage(1).real());
 }
 
-void EMT::Ph1::ExponentialDiode::mnaCompInitialize(
+void EMT::Ph1::QuadraticResistor::mnaCompInitialize(
     Real omega, Real timeStep, Attribute<Matrix>::Ptr leftVector) {
 
   updateMatrixNodeIndices();
-
-  **mRightVector = Matrix::Zero(leftVector->get().rows(), 1);
   **mNonlinearFunctionStamp = Matrix::Zero(leftVector->get().rows(), 1);
-  calculateNonlinearFunctionResult();
+  //calculateNonlinearFunctionResult(leftVector);
   updateJacobian();
 
   mMnaTasks.push_back(std::make_shared<MnaPostStep>(*this, leftVector));
 }
 
-void EMT::Ph1::ExponentialDiode::mnaCompApplySystemMatrixStamp(
+void EMT::Ph1::QuadraticResistor::mnaCompApplySystemMatrixStamp(
     SparseMatrixRow &systemMatrix) {
   // Set diagonal entries
   if (terminalNotGrounded(0)) {
@@ -94,7 +88,7 @@ void EMT::Ph1::ExponentialDiode::mnaCompApplySystemMatrixStamp(
   }
 }
 
-void EMT::Ph1::ExponentialDiode::mnaCompAddPostStepDependencies(
+void EMT::Ph1::QuadraticResistor::mnaCompAddPostStepDependencies(
     AttributeBase::List &prevStepDependencies,
     AttributeBase::List &attributeDependencies,
     AttributeBase::List &modifiedAttributes,
@@ -104,17 +98,17 @@ void EMT::Ph1::ExponentialDiode::mnaCompAddPostStepDependencies(
   modifiedAttributes.push_back(mIntfCurrent);
 }
 
-void EMT::Ph1::ExponentialDiode::mnaCompPreStep(Real time, Int timeStepCount) {
-  mnaCompApplyRightSideVectorStamp(**mRightVector);
-}
+// void EMT::Ph1::QuadraticResistor::mnaCompPreStep(Real time, Int timeStepCount) {
+//   mnaCompApplyRightSideVectorStamp(**mRightVector);
+// }
 
-void EMT::Ph1::ExponentialDiode::mnaCompPostStep(
+void EMT::Ph1::QuadraticResistor::mnaCompPostStep(
     Real time, Int timeStepCount, Attribute<Matrix>::Ptr &leftVector) {
   mnaUpdateVoltage(**leftVector);
   mnaUpdateCurrent(**leftVector);
 }
 
-void EMT::Ph1::ExponentialDiode::mnaCompUpdateVoltage(
+void EMT::Ph1::QuadraticResistor::mnaCompUpdateVoltage(
     const Matrix &leftVector) {
   // v0 - v1, anode to cathode
   (**mIntfVoltage)(0,0) = 0.;
@@ -129,13 +123,13 @@ void EMT::Ph1::ExponentialDiode::mnaCompUpdateVoltage(
   }
 }
 
-void EMT::Ph1::ExponentialDiode::mnaCompUpdateCurrent(
+void EMT::Ph1::QuadraticResistor::mnaCompUpdateCurrent(
     const Matrix &leftVector) {
   (**mIntfCurrent)(0, 0) =
-      (**mI_S) * (expf((**mIntfVoltage)(0, 0) / (**mV_T)) - 1.); //I = V^2
+      (1./(**mR)) * (**mIntfVoltage)(0, 0) * (**mIntfVoltage)(0, 0);
 }
 
-void EMT::Ph1::ExponentialDiode::iterationUpdate(const Matrix &leftVector) {
+void EMT::Ph1::QuadraticResistor::iterationUpdate(const Matrix &leftVector) {
   //Update phase voltages
   (**mIntfVoltage)(0, 0) = 0.;
   if (terminalNotGrounded(0)) {
@@ -148,29 +142,27 @@ void EMT::Ph1::ExponentialDiode::iterationUpdate(const Matrix &leftVector) {
         Math::realFromVectorElement(leftVector, matrixNodeIndex(1, 0));
   }
   //std::cout << leftVector << std::endl;
-  calculateNonlinearFunctionResult();
   //std::cout << **mIntfVoltage << std::endl;
   updateJacobian();
 }
 
-void EMT::Ph1::ExponentialDiode::calculateNonlinearFunctionResult() {
+void EMT::Ph1::QuadraticResistor::calculateNonlinearFunctionResult(const Matrix &leftVector) {
 
-  (**mIntfCurrent)(0, 0) =
-      (**mI_S) * (expf((**mIntfVoltage)(0, 0) / (**mV_T)) - 1.); //I_D = V_D^2
+  Real nonLinearResult = Math::realFromVectorElement(leftVector, matrixNodeIndex(0, 0)) -  Math::realFromVectorElement(leftVector, matrixNodeIndex(1, 0));
 
   if (terminalNotGrounded(1)) {
     Math::setVectorElement(**mNonlinearFunctionStamp, matrixNodeIndex(1, 0),
-                           (**mIntfCurrent)(0, 0));
+                           nonLinearResult);
   }
   if (terminalNotGrounded(0)) {
     Math::setVectorElement(**mNonlinearFunctionStamp, matrixNodeIndex(0, 0),
-                           -(**mIntfCurrent)(0, 0));
+                           -nonLinearResult);
   }
 }
 
-void EMT::Ph1::ExponentialDiode::updateJacobian() {
+void EMT::Ph1::QuadraticResistor::updateJacobian() {
   Jacobian(0, 0) =
-      (**mI_S / (**mV_T)) * expf((**mIntfVoltage)(0, 0) / (**mV_T));
+      2.0 * (1./(**mR)) * (**mIntfVoltage)(0, 0);
       std::cout << "IntfV:" << (**mIntfVoltage)(0,0) << std::endl << std::endl;
       std::cout << "IntfI:" << (**mIntfCurrent)(0,0) << std::endl << std::endl;
       std::cout << "Jacobian: " << Jacobian(0,0) << std::endl << std::endl;

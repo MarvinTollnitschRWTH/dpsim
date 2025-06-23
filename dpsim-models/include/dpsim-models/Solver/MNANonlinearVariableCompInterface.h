@@ -26,7 +26,8 @@ public:
 
   /// Returns value of the component's defining voltage/current equation
   //	based on current circuit quantities
-  virtual void calculateNonlinearFunctionResult() = 0;
+  virtual void updateJacobian() = 0;
+  virtual void calculateNonlinearFunctionResult(const Matrix &leftVector) = 0;
   virtual void iterationUpdate(const Matrix &leftVector) = 0;
 
 protected:

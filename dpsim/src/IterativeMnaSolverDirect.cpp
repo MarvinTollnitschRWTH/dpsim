@@ -80,10 +80,29 @@ void IterativeMnaSolverDirect<VarType>::solveWithSystemMatrixRecomputation(
 
     //	mDirectLinearSolvers.solve takes a Matrix reference,
     //	thus we need a temporary variable as an argument
+
     Matrix temp = (this->mRightSideVector) -
-                  ((this->mVariableSystemMatrix) * (**(this->mLeftSideVector)) +
+                  ((this->mBaseSystemMatrix) * (**(this->mLeftSideVector)) +
                    mNonlinearFunctionResult);
     mLeftStep = mDirectLinearSolverVariableSystemMatrix->solve(temp);
+
+    //mBaseSystemMatrix != VariableSystemmatrix if switches are present, only workaround for now
+      std::cout << "----------------------------------------------------------------" << std::endl;
+      std::cout << "Newton-Raphson iteration:" << std::endl;
+      std::cout << "Total System matrix (Jacobian)" << std::endl;
+      std::cout << mVariableSystemMatrix << std::endl;
+      std::cout << "leftStep (Iteration Result)" << std::endl;
+      std::cout << mLeftStep << std::endl;
+      std::cout << "Variable system matrix" << std::endl;
+      std::cout << mBaseSystemMatrix << std::endl;
+      std::cout << "Old leftVector" << std::endl;
+      std::cout << **(this->mLeftSideVector) << std::endl;
+      std::cout << "NonlinearResults" << std::endl;
+      std::cout << mNonlinearFunctionResult << std::endl;
+      std::cout << "Right side vector" << std::endl;
+      std::cout << mRightSideVector << std::endl;
+
+    Matrix oldLeftSideVector = **(this->mLeftSideVector);
 
     //	x2 = x1 + (x2-x1)
     **(this->mLeftSideVector) += mLeftStep;
@@ -101,7 +120,11 @@ void IterativeMnaSolverDirect<VarType>::solveWithSystemMatrixRecomputation(
     //	the new solution vector
 
     for (auto comp : mMNANonlinearVariableComponents)
-      comp->iterationUpdate(**(this->mLeftSideVector));
+      comp->iterationUpdate(**(this->mLeftSideVector)); //DECOUPLE FROM JACOBIAN UPDATE
+
+   for (auto comp : mMNANonlinearVariableComponents){
+      comp->calculateNonlinearFunctionResult(oldLeftSideVector);
+   }
 
     //	Collect all System equation contributions from
     //	nonlinear SSN components
@@ -136,6 +159,21 @@ void IterativeMnaSolverDirect<VarType>::solveWithSystemMatrixRecomputation(
                        (this->mBaseSystemMatrix * (**(this->mLeftSideVector)) +
                         mNonlinearFunctionResult);
 
+    std::cout << "Solved system for this iteration:" << std::endl;
+    std::cout << "LeftStep: " << std::endl
+              << mLeftStep << std::endl;
+    std::cout << "Linear system matrix: " << std::endl
+              << mBaseSystemMatrix << std::endl
+              << "New LeftSideVector: " << std::endl
+              << **(this->mLeftSideVector) << std::endl
+              << "NonlinearResults: " << std::endl
+              << mNonlinearFunctionResult << std::endl
+              << "RightSideVector: " << std::endl
+              << mRightSideVector << std::endl
+              << "Error: " << std::endl
+              << calculationError << std::endl
+              << "----------------------------------------------------------------" << std::endl;
+
     isConverged = true;
     for (int i = 0; i < calculationError.rows(); i++) {
       calculationErrorElement = calculationError(i, 0);
@@ -145,11 +183,8 @@ void IterativeMnaSolverDirect<VarType>::solveWithSystemMatrixRecomputation(
       }
     }
     iterations++;
-  } while (!isConverged && iterations < 10);
-      std::cout << mVariableSystemMatrix << std::endl;
-      std::cout << **(this->mLeftSideVector) << std::endl;
-      std::cout << mRightSideVector << std::endl;
-      std::cout << mNonlinearFunctionResult << std::endl;
+  } while (!isConverged && iterations < 100);
+
 
   /// TODO: split into separate task?
   //(dependent on x, updating all v attributes)
@@ -189,7 +224,12 @@ void IterativeMnaSolverDirect<VarType>::initialize() {
 
   // Delta of iterative Solutions
   mLeftStep = Matrix::Zero(this->mLeftSideVector->get().rows(), 1);
-
+  Matrix init = Matrix::Zero(3,1);
+  //init(0,0) = 1.0;
+  //init(1,0) = 0.4;
+  //init(2,0) = 0.012;
+  **(this->mLeftSideVector) = init;
+  
   //If mRightSideVector deviates less than Epsilon per element
   //from the result of the system defining node equations, mesh equations
   //and auxhiliary equations (calculationError), the solution is good enough

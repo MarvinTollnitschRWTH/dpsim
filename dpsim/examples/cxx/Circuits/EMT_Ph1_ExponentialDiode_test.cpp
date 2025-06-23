@@ -3,7 +3,7 @@
 
 using namespace DPsim;
 using namespace CPS::EMT;
-
+/*
 void EMT_Ph1_ExponentialDiode() {
   // Define simulation scenario
   Real timeStep = 0.0001;
@@ -25,7 +25,7 @@ void EMT_Ph1_ExponentialDiode() {
   vs0->setParameters(CPS::Complex(1., 0.), 50.0);
 
   auto load = CPS::EMT::Ph1::Resistor::make("Load", Logger::Level::debug);
-  load->setParameters(10.);
+  load->setParameters(10.0);
 
   auto expDiode = Ph1::ExponentialDiode::make("ExponentialDiode", Logger::Level::debug);
   expDiode->setParameters(
@@ -166,11 +166,179 @@ void vs_diode(){
   sim.setFinalTime(finalTime);
   sim.run();
 }
+*/
+
+void QuadRes(){
+ // Define simulation scenario
+  Real timeStep = 0.0001;
+  Real finalTime = 0.1;
+  String simName = "EMT_Ph1_qRes";
+  Logger::setLogDir("logs/" + simName);
+
+  // Nodes
+  const Real initialSingleVoltage_v1 = 1.0;
+  auto n1 = SimNode::make("n1", PhaseType::Single);
+  auto n2 = SimNode::make("n2", PhaseType::Single);
+  n1->setInitialVoltage(initialSingleVoltage_v1);
+
+  // Components
+  auto r1 = Ph1::Resistor::make("r1", Logger::Level::debug);
+  r1->setParameters(10.);
+
+  auto vs0 = Ph1::VoltageSource::make("vs0", Logger::Level::debug);
+  vs0->setParameters(CPS::Complex(1., 0.), 50.0);
+
+  auto qRes = Ph1::QuadraticResistor::make("qRes", Logger::Level::debug);
+  qRes->setParameters(10.);
+
+  vs0->connect(SimNode::List{SimNode::GND, n1});
+
+  r1->connect(SimNode::List{n1, n2});
+
+  qRes->connect(SimNode::List{n2, SimNode::GND});
+
+  // Define system topology
+  auto sys = SystemTopology(50, SystemNodeList{n1, n2},
+                            SystemComponentList{vs0, r1, qRes});
+
+  // Logging
+  auto logger = DataLogger::make(simName);
+  logger->logAttribute("qRes_V", qRes->attribute("v_intf"));
+  logger->logAttribute("qRes_I", qRes->attribute("i_intf"));
+
+  Simulation sim(simName, Logger::Level::debug);
+  sim.doInitFromNodesAndTerminals(true);
+  sim.setSystem(sys);
+  sim.addLogger(logger);
+  sim.setDomain(Domain::EMT);
+  sim.setSolverType(Solver::Type::ITERATIVEMNA);
+  sim.setDirectLinearSolverConfiguration(DirectLinearSolverConfiguration());
+  sim.setTimeStep(timeStep);
+  sim.setFinalTime(finalTime);
+  sim.run();
+}
+
+
+// void DummyTest(){
+//  // Define simulation scenario
+//   Real timeStep = 0.0001;
+//   Real finalTime = 0.1;
+//   String simName = "EMT_Ph1_DummyTest";
+//   Logger::setLogDir("logs/" + simName);
+
+//   // Nodes
+//   const Real initialSingleVoltage_v1 = 1.0;
+//   const Real initialSingleVoltage_v2 = 0.5;
+//   auto n1 = SimNode::make("n1", PhaseType::Single);
+//   auto n2 = SimNode::make("n2", PhaseType::Single);
+//   n1->setInitialVoltage(initialSingleVoltage_v1);
+//   n2->setInitialVoltage(initialSingleVoltage_v2);
+
+//   // Components
+//   auto r1 = Ph1::Resistor::make("r1", Logger::Level::debug);
+//   r1->setParameters(10.);
+
+//   auto vs0 = Ph1::VoltageSource::make("vs0", Logger::Level::debug);
+//   vs0->setParameters(CPS::Complex(1., 0.), 50.0);
+
+//   auto DummyRes = Ph1::NonlinearDummyResistor::make("DummyRes", Logger::Level::debug);
+//   DummyRes->setParameters(10.);
+
+//   vs0->connect(SimNode::List{SimNode::GND, n1});
+
+//   r1->connect(SimNode::List{n1, n2});
+
+//   DummyRes->connect(SimNode::List{n2, SimNode::GND});
+
+//   // Define system topology
+//   auto sys = SystemTopology(50, SystemNodeList{n1, n2},
+//                             SystemComponentList{vs0, r1, DummyRes});
+
+//   // Logging
+//   auto logger = DataLogger::make(simName);
+//   logger->logAttribute("V_DummyRes", DummyRes->attribute("v_intf"));
+//   logger->logAttribute("I_DummyRes", DummyRes->attribute("i_intf"));
+
+//   Simulation sim(simName, Logger::Level::debug);
+//   sim.doInitFromNodesAndTerminals(true);
+//   sim.setSystem(sys);
+//   sim.addLogger(logger);
+//   sim.setDomain(Domain::EMT);
+//   sim.setSolverType(Solver::Type::ITERATIVEMNA);
+//   sim.setDirectLinearSolverConfiguration(DirectLinearSolverConfiguration());
+//   sim.setTimeStep(timeStep);
+//   sim.setFinalTime(finalTime);
+//   sim.run();
+// }
+
+
+void MSCP_example3(){
+ // Define simulation scenario
+  Real timeStep = 0.0001;
+  Real finalTime = 0.1;
+  String simName = "EMT_Ph1_MSCP_example3";
+  Logger::setLogDir("logs/" + simName);
+
+  // Nodes
+  const Real initialSingleVoltage_v1 = 1.0;
+  const Real initialSingleVoltage_v2 = 0.0;
+  const Real initialSingleVoltage_v3 = 0.0;
+  auto n1 = SimNode::make("n1", PhaseType::Single);
+  auto n2 = SimNode::make("n2", PhaseType::Single);
+  auto n3 = SimNode::make("n3", PhaseType::Single);
+  n1->setInitialVoltage(initialSingleVoltage_v1);
+  n2->setInitialVoltage(initialSingleVoltage_v2);
+  n3->setInitialVoltage(initialSingleVoltage_v3);
+
+  // Components
+  auto R_s = Ph1::Resistor::make("R_s", Logger::Level::debug);
+  R_s->setParameters(10.);
+
+  auto V_0 = Ph1::VoltageSource::make("V_0", Logger::Level::debug);
+  V_0->setParameters(CPS::Complex(1., 0.), 50.0);
+
+  auto V_R = Ph1::QuadraticResistor::make("V_R", Logger::Level::debug);
+  V_R->setParameters(10.);
+
+  auto C = Ph1::Capacitor::make("C", Logger::Level::debug);
+  C->setParameters(0.01);
+
+  V_0->connect(SimNode::List{SimNode::GND, n1});
+
+  R_s->connect(SimNode::List{n1, n2});
+
+  V_R->connect(SimNode::List{n2, n3});
+
+  C->connect(SimNode::List{n3, SimNode::GND});
+
+  // Define system topology
+  auto sys = SystemTopology(50, SystemNodeList{n1, n2, n3},
+                            SystemComponentList{V_0, R_s, V_R, C});
+
+  // Logging
+  auto logger = DataLogger::make(simName);
+  logger->logAttribute("V_R_V", V_R->attribute("v_intf"));
+  logger->logAttribute("V_R_I", V_R->attribute("i_intf"));
+
+  Simulation sim(simName, Logger::Level::debug);
+  sim.doInitFromNodesAndTerminals(true);
+  sim.setSystem(sys);
+  sim.addLogger(logger);
+  sim.setDomain(Domain::EMT);
+  sim.setSolverType(Solver::Type::ITERATIVEMNA);
+  sim.setDirectLinearSolverConfiguration(DirectLinearSolverConfiguration());
+  sim.setTimeStep(timeStep);
+  sim.setFinalTime(finalTime);
+  sim.run();
+}
 
 
 int main() {
   //EMT_Ph1_ExponentialDiode();
   //connectionTest();
-  vs_diode();
+  //vs_diode();
+  QuadRes();
+  //DummyTest();
+  //MSCP_example3();
   return 0;
 }

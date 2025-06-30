@@ -86,22 +86,6 @@ void IterativeMnaSolverDirect<VarType>::solveWithSystemMatrixRecomputation(
                    mNonlinearFunctionResult);
     mLeftStep = mDirectLinearSolverVariableSystemMatrix->solve(temp);
 
-    //mBaseSystemMatrix != VariableSystemmatrix if switches are present, only workaround for now
-      std::cout << "----------------------------------------------------------------" << std::endl;
-      std::cout << "Newton-Raphson iteration:" << std::endl;
-      std::cout << "Total System matrix (Jacobian)" << std::endl;
-      std::cout << mVariableSystemMatrix << std::endl;
-      std::cout << "leftStep (Iteration Result)" << std::endl;
-      std::cout << mLeftStep << std::endl;
-      std::cout << "Variable system matrix" << std::endl;
-      std::cout << mBaseSystemMatrix << std::endl;
-      std::cout << "Old leftVector" << std::endl;
-      std::cout << **(this->mLeftSideVector) << std::endl;
-      std::cout << "NonlinearResults" << std::endl;
-      std::cout << mNonlinearFunctionResult << std::endl;
-      std::cout << "Right side vector" << std::endl;
-      std::cout << mRightSideVector << std::endl;
-
     Matrix oldLeftSideVector = **(this->mLeftSideVector);
 
     //	x2 = x1 + (x2-x1)
@@ -159,20 +143,27 @@ void IterativeMnaSolverDirect<VarType>::solveWithSystemMatrixRecomputation(
                        (this->mBaseSystemMatrix * (**(this->mLeftSideVector)) +
                         mNonlinearFunctionResult);
 
-    std::cout << "Solved system for this iteration:" << std::endl;
-    std::cout << "LeftStep: " << std::endl
-              << mLeftStep << std::endl;
-    std::cout << "Linear system matrix: " << std::endl
-              << mBaseSystemMatrix << std::endl
-              << "New LeftSideVector: " << std::endl
-              << **(this->mLeftSideVector) << std::endl
-              << "NonlinearResults: " << std::endl
-              << mNonlinearFunctionResult << std::endl
-              << "RightSideVector: " << std::endl
-              << mRightSideVector << std::endl
-              << "Error: " << std::endl
-              << calculationError << std::endl
-              << "----------------------------------------------------------------" << std::endl;
+    //mBaseSystemMatrix != VariableSystemmatrix if switches are present, only workaround for now
+    // std::cout << "Solved system for this iteration:" << std::endl;
+    // std::cout << "System Matrix: " << std::endl
+    //           << mVariableSystemMatrix << std::endl
+    //           << "LeftStep: " << std::endl
+    //           << mLeftStep << std::endl
+    //           << "Linear system matrix: " << std::endl
+    //           << mBaseSystemMatrix << std::endl
+    //           << "Old leftVector" << std::endl
+    //           << oldLeftSideVector << std::endl
+    //           << "NonlinearResults: " << std::endl
+    //           << mNonlinearFunctionResult << std::endl
+    //           << "RightSideVector: " << std::endl
+    //           << mRightSideVector << std::endl
+    //           << "Error: " << std::endl
+    //           << calculationError << std::endl
+    //           << "----------------------------------------------------------------" << std::endl;
+               std::cout << "Old and new LeftVector:" << std::endl
+               << oldLeftSideVector << std::endl << std::endl << **(this->mLeftSideVector) << std::endl << std::endl;
+
+
 
     isConverged = true;
     for (int i = 0; i < calculationError.rows(); i++) {
@@ -225,9 +216,9 @@ void IterativeMnaSolverDirect<VarType>::initialize() {
   // Delta of iterative Solutions
   mLeftStep = Matrix::Zero(this->mLeftSideVector->get().rows(), 1);
   Matrix init = Matrix::Zero(3,1);
-  //init(0,0) = 1.0;
-  //init(1,0) = 0.4;
-  //init(2,0) = 0.012;
+  init(0,0) = 1.0;
+  init(1,0) = 0.618034;
+  init(2,0) = -0.0381966;
   **(this->mLeftSideVector) = init;
   
   //If mRightSideVector deviates less than Epsilon per element

@@ -177,19 +177,21 @@ void QuadRes(){
 
   // Nodes
   const Real initialSingleVoltage_v1 = 1.0;
+  const Real initialSingleVoltage_v2 = 0.618034;
   auto n1 = SimNode::make("n1", PhaseType::Single);
   auto n2 = SimNode::make("n2", PhaseType::Single);
   n1->setInitialVoltage(initialSingleVoltage_v1);
+  n2->setInitialVoltage(initialSingleVoltage_v2);
 
   // Components
   auto r1 = Ph1::Resistor::make("r1", Logger::Level::debug);
-  r1->setParameters(10.);
+  r1->setParameters(10.0);
 
   auto vs0 = Ph1::VoltageSource::make("vs0", Logger::Level::debug);
   vs0->setParameters(CPS::Complex(1., 0.), 50.0);
 
   auto qRes = Ph1::QuadraticResistor::make("qRes", Logger::Level::debug);
-  qRes->setParameters(10.);
+  qRes->setParameters(10.0);
 
   vs0->connect(SimNode::List{SimNode::GND, n1});
 
@@ -205,6 +207,9 @@ void QuadRes(){
   auto logger = DataLogger::make(simName);
   logger->logAttribute("qRes_V", qRes->attribute("v_intf"));
   logger->logAttribute("qRes_I", qRes->attribute("i_intf"));
+  logger->logAttribute("r_V", r1->attribute("v_intf"));
+  logger->logAttribute("r_I", r1->attribute("i_intf"));
+  logger->logAttribute("vs0_v", vs0->attribute("v_intf"));
 
   Simulation sim(simName, Logger::Level::debug);
   sim.doInitFromNodesAndTerminals(true);
@@ -319,6 +324,7 @@ void MSCP_example3(){
   auto logger = DataLogger::make(simName);
   logger->logAttribute("V_R_V", V_R->attribute("v_intf"));
   logger->logAttribute("V_R_I", V_R->attribute("i_intf"));
+  
 
   Simulation sim(simName, Logger::Level::debug);
   sim.doInitFromNodesAndTerminals(true);

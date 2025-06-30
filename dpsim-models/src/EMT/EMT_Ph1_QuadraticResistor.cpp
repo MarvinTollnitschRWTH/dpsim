@@ -59,7 +59,7 @@ void EMT::Ph1::QuadraticResistor::mnaCompInitialize(
 
   updateMatrixNodeIndices();
   **mNonlinearFunctionStamp = Matrix::Zero(leftVector->get().rows(), 1);
-  //calculateNonlinearFunctionResult(leftVector);
+  calculateNonlinearFunctionResult(**leftVector);
   updateJacobian();
 
   mMnaTasks.push_back(std::make_shared<MnaPostStep>(*this, leftVector));
@@ -127,6 +127,9 @@ void EMT::Ph1::QuadraticResistor::mnaCompUpdateCurrent(
     const Matrix &leftVector) {
   (**mIntfCurrent)(0, 0) =
       (1./(**mR)) * (**mIntfVoltage)(0, 0) * (**mIntfVoltage)(0, 0);
+      if((**mIntfVoltage)(0, 0) < 0.0) {
+        (**mIntfCurrent)(0, 0) = - (**mIntfCurrent)(0, 0);
+      } 
 }
 
 void EMT::Ph1::QuadraticResistor::iterationUpdate(const Matrix &leftVector) {
@@ -148,7 +151,11 @@ void EMT::Ph1::QuadraticResistor::iterationUpdate(const Matrix &leftVector) {
 
 void EMT::Ph1::QuadraticResistor::calculateNonlinearFunctionResult(const Matrix &leftVector) {
 
-  Real nonLinearResult = Math::realFromVectorElement(leftVector, matrixNodeIndex(0, 0)) -  Math::realFromVectorElement(leftVector, matrixNodeIndex(1, 0));
+  Real IntfV = Math::realFromVectorElement(leftVector, matrixNodeIndex(0, 0)) -  Math::realFromVectorElement(leftVector, matrixNodeIndex(1, 0));
+  Real nonLinearResult = (1./(**mR)) * IntfV * IntfV;
+  if(IntfV < 0.0) {
+    nonLinearResult = - nonLinearResult;
+  } 
 
   if (terminalNotGrounded(1)) {
     Math::setVectorElement(**mNonlinearFunctionStamp, matrixNodeIndex(1, 0),
@@ -163,8 +170,11 @@ void EMT::Ph1::QuadraticResistor::calculateNonlinearFunctionResult(const Matrix 
 void EMT::Ph1::QuadraticResistor::updateJacobian() {
   Jacobian(0, 0) =
       2.0 * (1./(**mR)) * (**mIntfVoltage)(0, 0);
-      std::cout << "IntfV:" << (**mIntfVoltage)(0,0) << std::endl << std::endl;
-      std::cout << "IntfI:" << (**mIntfCurrent)(0,0) << std::endl << std::endl;
-      std::cout << "Jacobian: " << Jacobian(0,0) << std::endl << std::endl;
+  if((**mIntfVoltage)(0, 0) < 0.0) {
+    Jacobian(0, 0) = - Jacobian(0, 0);
+  }
+      //std::cout << "IntfV:" << (**mIntfVoltage)(0,0) << std::endl << std::endl;
+      //std::cout << "IntfI:" << (**mIntfCurrent)(0,0) << std::endl << std::endl;
+      //std::cout << "Jacobian: " << Jacobian(0,0) << std::endl << std::endl;
     
 }

@@ -70,7 +70,7 @@ protected:
   // and auxhiliary equations (calculationError),
   // the solution is good enough
   bool isConverged = true;
-  Real Epsilon = 10e-4;;
+  Real Epsilon = 1e-3;;
   Matrix calculationError;
   Real calculationErrorElement;
 
@@ -92,6 +92,7 @@ protected:
   using MnaSolverDirect<VarType>::mRightSideVector;
 
   using MnaSolver<VarType>::mNumMatrixNodeIndices;
+  using MnaSolver<VarType>::mLeftSideVector;
 
   void solveWithSystemMatrixRecomputation(Real time,
                                           Int timeStepCount) override;

@@ -1,7 +1,7 @@
-EMT_Ph1_DummyTest.Solve,241108
-EMT_Ph1_DummyTest.Write,4775
+r1.MnaPostStep,16420
 vs0.MnaPostStep,0
-r1.MnaPostStep,0
-DummyRes.MnaPostStep,1002
-vs0.MnaPreStep,1264
+qRes.MnaPostStep,1217
+EMT_Ph1_qRes.Solve,434555
+EMT_Ph1_qRes.Write,9037
+vs0.MnaPreStep,1366
 Root,0

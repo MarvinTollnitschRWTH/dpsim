@@ -83,7 +83,6 @@ void EMT::Ph1::Resistor::mnaCompUpdateVoltage(const Matrix &leftVector) {
     (**mIntfVoltage)(0, 0) =
         (**mIntfVoltage)(0, 0) -
         Math::realFromVectorElement(leftVector, matrixNodeIndex(0));
-        std::cout << (**mIntfVoltage) <<  std::endl;
 }
 
 void EMT::Ph1::Resistor::mnaCompUpdateCurrent(const Matrix &leftVector) {

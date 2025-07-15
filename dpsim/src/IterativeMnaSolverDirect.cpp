@@ -106,10 +106,6 @@ void IterativeMnaSolverDirect<VarType>::solveWithSystemMatrixRecomputation(
     for (auto comp : mMNANonlinearVariableComponents)
       comp->iterationUpdate(**(this->mLeftSideVector)); //DECOUPLE FROM JACOBIAN UPDATE
 
-   for (auto comp : mMNANonlinearVariableComponents){
-      comp->calculateNonlinearFunctionResult(oldLeftSideVector);
-   }
-
     //	Collect all System equation contributions from
     //	nonlinear SSN components
 
@@ -153,8 +149,8 @@ void IterativeMnaSolverDirect<VarType>::solveWithSystemMatrixRecomputation(
     //           << mBaseSystemMatrix << std::endl
     //           << "Old leftVector" << std::endl
     //           << oldLeftSideVector << std::endl
-    //           << "NonlinearResults: " << std::endl
-    //           << mNonlinearFunctionResult << std::endl
+       std::cout << "NonlinearResults: " << std::endl
+                 << mNonlinearFunctionResult << std::endl;
     //           << "RightSideVector: " << std::endl
     //           << mRightSideVector << std::endl
     //           << "Error: " << std::endl
@@ -163,7 +159,9 @@ void IterativeMnaSolverDirect<VarType>::solveWithSystemMatrixRecomputation(
                std::cout << "Old and new LeftVector:" << std::endl
                << oldLeftSideVector << std::endl << std::endl << **(this->mLeftSideVector) << std::endl << std::endl;
 
-
+   for (auto comp : mMNANonlinearVariableComponents){
+      comp->calculateNonlinearFunctionResult(mLeftSideVector);
+   }
 
     isConverged = true;
     for (int i = 0; i < calculationError.rows(); i++) {

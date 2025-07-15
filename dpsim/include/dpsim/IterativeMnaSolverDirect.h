@@ -70,7 +70,7 @@ protected:
   // and auxhiliary equations (calculationError),
   // the solution is good enough
   bool isConverged = true;
-  Real Epsilon = 1e-3;;
+  Real Epsilon = 1e-3;
   Matrix calculationError;
   Real calculationErrorElement;
 

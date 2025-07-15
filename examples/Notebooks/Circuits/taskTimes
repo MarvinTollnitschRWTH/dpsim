@@ -1,7 +1,7 @@
-r1.MnaPostStep,16420
+r1.MnaPostStep,6488
 vs0.MnaPostStep,0
-qRes.MnaPostStep,1217
-EMT_Ph1_qRes.Solve,434555
-EMT_Ph1_qRes.Write,9037
-vs0.MnaPreStep,1366
+qRes.MnaPostStep,1164
+EMT_Ph1_qRes.Solve,247268
+EMT_Ph1_qRes.Write,8282
+vs0.MnaPreStep,1255
 Root,0

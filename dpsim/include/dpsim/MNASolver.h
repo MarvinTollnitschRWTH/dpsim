@@ -181,6 +181,8 @@ protected:
   virtual std::shared_ptr<CPS::Task> createLogTask() = 0;
   /// Create a solve task for this solver implementation
   virtual std::shared_ptr<CPS::Task> createSolveTaskHarm(UInt freqIdx) = 0;
+  /// Create solve task for iterative (nonlinear) system solving
+	virtual std::shared_ptr<CPS::Task> createSolveTaskIterative() = 0;
 
   // #### Scheduler Task Methods ####
   /// Solves system for single frequency

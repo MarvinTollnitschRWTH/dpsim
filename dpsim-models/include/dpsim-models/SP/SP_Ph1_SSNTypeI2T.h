@@ -4,7 +4,7 @@
 #pragma once
 
 #include <dpsim-models/MNASimPowerComp.h>
-#include <dpsim-models/Solver/MNAInterface.h>
+#include <dpsim-models/Solver/MNATearInterface.h>
 
 namespace CPS {
 namespace SP {
@@ -19,8 +19,8 @@ namespace Ph1 {
 /// y represents external voltage (mIntfVoltage),
 /// x represents any component states.
 class SSNTypeI2T : public MNASimPowerComp<Complex>,
-                   public MNATearInterface,
-                   public SharedFactory<SSNTypeI2T> {
+                   public SharedFactory<SSNTypeI2T>,
+                   public MNATearInterface {
 private:
   void ssnUpdateState();
   void setSSNMatricesToZero();
@@ -31,6 +31,7 @@ protected:
   Matrix mUOld;
   Matrix mW;
   Matrix mYHist;
+  Real mOmega;
 
   /// susceptance [S]
   Complex mSusceptance;
@@ -41,10 +42,6 @@ public:
   const CPS::Attribute<Matrix>::Ptr mC;
   const CPS::Attribute<Matrix>::Ptr mD;
 
-  const CPS::Attribute<Matrix>::Ptr mdA;
-  const CPS::Attribute<Matrix>::Ptr mdB;
-  const CPS::Attribute<Matrix>::Ptr mdC;
-
   /// Defines UID, name, component parameters and logging level
   SSNTypeI2T(String uid, String name,
              Logger::Level logLevel = Logger::Level::off);
@@ -52,7 +49,7 @@ public:
   SSNTypeI2T(String name, Logger::Level logLevel = Logger::Level::off)
       : SSNTypeI2T(name, name, logLevel) {}
 
-  SimPowerComp<Real>::Ptr clone(String name) override;
+  SimPowerComp<Complex>::Ptr clone(String name) override;
 
   void manualInit(Matrix initialState, Matrix initialInput,
                   Matrix initialOldInput, Real initCurrent, Real initVoltage);

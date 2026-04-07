@@ -49,6 +49,7 @@ set(CIRCUIT_SOURCES
 	Circuits/SP_Slack_PiLine_VSI_with_PF_Init.cpp
 	Circuits/SP_Slack_PiLine_VSI_Ramp_with_PF_Init.cpp
 	Circuits/SP_Slack_PiLine_PQLoad_with_PF_Init.cpp
+	Circuits/SP_Ph1_General2TerminalSSN.cpp
 
 	# Combined EMT/DP/SP examples
 	Circuits/EMT_DP_SP_Slack.cpp

@@ -51,6 +51,7 @@ void MnaSolverDirect<VarType>::switchedMatrixStamp(
   auto end = std::chrono::steady_clock::now();
   std::chrono::duration<Real> diff = end - start;
   mFactorizeTimes.push_back(diff.count());
+  std::cout << sys << std::endl;
 }
 
 template <typename VarType>

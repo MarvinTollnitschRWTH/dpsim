@@ -6,16 +6,12 @@
 using namespace CPS;
 
 SP::Ph1::SSNTypeI2T::SSNTypeI2T(String uid, String name, Logger::Level logLevel)
-    : MNASimPowerComp<Real>(uid, name, true, true, logLevel),
+    : MNASimPowerComp<Complex>(uid, name, true, true, logLevel),
       mA(mAttributes->create<Matrix>("A")),
       mB(mAttributes->create<Matrix>("B")),
       mC(mAttributes->create<Matrix>("C")),
-      mD(mAttributes->create<Matrix>("D")),
-      mdA(mAttributes->create<Matrix>("dA")),
-      mdB(mAttributes->create<Matrix>("dB")),
-      mdC(mAttributes->create<Matrix>("dC")) {
+      mD(mAttributes->create<Matrix>("D")) {
   setTerminalNumber(2);
-  setVirtualNodeNumber(1);
   **mIntfVoltage = Matrix::Zero(1, 1);
   **mIntfCurrent = Matrix::Zero(1, 1);
   mParametersSet = false;
@@ -41,7 +37,7 @@ void SP::Ph1::SSNTypeI2T::setParameters(const Matrix A, const Matrix B,
           "Set all matrices to scalar zero.");
     if (B.cols() != 1)
       throw std::invalid_argument(
-          "Invalid dimensions; two terminal V-type SSN component only has on "
+          "Invalid dimensions; two terminal V-type SSN component only has one "
           "external voltage, so column number of B must be one! Set all "
           "matrices to scalar zero.");
     **mB = B;
@@ -96,22 +92,30 @@ SimPowerComp<Complex>::Ptr SP::Ph1::SSNTypeI2T::clone(String name) {
 
 void SP::Ph1::SSNTypeI2T::initializeFromNodesAndTerminals(Real frequency) {
 
-  Real omega = 2 * PI * frequency;
+  mOmega = 2 * PI * frequency;
+}
 
-  Math::calculateStateSpaceTrapezoidalMatrices(**mA, **mB, timeStep, **mdA,
-                                               **mdB);
+void SP::Ph1::SSNTypeI2T::mnaCompInitialize(Real omega, Real timeStep,
+                                            Attribute<Matrix>::Ptr leftVector) {
+  updateMatrixNodeIndices();
 
-  SparseMatrixComp H = Math::invertMatrix(
-      Complex(0, 1) * Matrix::Identity((**mdA).rows(), (**mdA).cols()) - **mdA)
+  MatrixComp H_inv =
+      mOmega * Complex(0, 1.) * Matrix::Identity((**mA).rows(), (**mA).cols()) -
+      **mA;
 
-      mSusceptance = 1. / ((**mC) * H * (**mdB) + mD)
+  MatrixComp H = MatrixComp(H_inv.rows(), H_inv.cols());
 
-                              (**mIntfVoltage)(0, 0) =
-                         initialSingleVoltage(1) - initialSingleVoltage(0);
+  H = H_inv.inverse().eval();
+
+  mSusceptance =
+      1. /
+      (((**mC).eval() * H * (**mB).eval() + (**mD).eval())
+           .value()); //I-type: y=V, x=I ->Matrix factor is reactance, not susceptance
+
+  (**mIntfVoltage)(0, 0) = initialSingleVoltage(1) - initialSingleVoltage(0);
   **mIntfCurrent = mSusceptance * **mIntfVoltage;
 
   SPDLOG_LOGGER_INFO(mSLog, "\nImpedance [Ohm]: {:s}",
-                     Logger::realToString(**mInductance),
                      Logger::complexToString(1. / mSusceptance));
   SPDLOG_LOGGER_INFO(mSLog,
                      "\n--- Initialization from powerflow ---"
@@ -124,11 +128,6 @@ void SP::Ph1::SSNTypeI2T::initializeFromNodesAndTerminals(Real frequency) {
                      Logger::phasorToString((**mIntfCurrent)(0, 0)),
                      Logger::phasorToString(initialSingleVoltage(0)),
                      Logger::phasorToString(initialSingleVoltage(1)));
-}
-
-void SP::Ph1::SSNTypeV2T::mnaCompInitialize(Real omega, Real timeStep,
-                                            Attribute<Matrix>::Ptr leftVector) {
-  updateMatrixNodeIndices();
 
   SPDLOG_LOGGER_INFO(mSLog,
                      "\n--- MNA initialization ---"
@@ -139,15 +138,15 @@ void SP::Ph1::SSNTypeV2T::mnaCompInitialize(Real omega, Real timeStep,
                      Logger::phasorToString((**mIntfCurrent)(0, 0)));
 }
 
-void SP::Ph1::SSNTypeV2T::mnaCompApplySystemMatrixStamp(
+void SP::Ph1::SSNTypeI2T::mnaCompApplySystemMatrixStamp(
     SparseMatrixRow &systemMatrix) {
 
-  MNAStampUtils::stampConductance(
-      mSusceptance, systemMatrix, matrixNodeIndex(0), matrixNodeIndex(1),
-      terminalNotGrounded(0), terminalNotGrounded(1), mSLog);
+  MNAStampUtils::stampAdmittance(mSusceptance, systemMatrix, matrixNodeIndex(0),
+                                 matrixNodeIndex(1), terminalNotGrounded(0),
+                                 terminalNotGrounded(1), mSLog);
 }
 
-void SP::Ph1::SSNTypeV2T::mnaCompAddPostStepDependencies(
+void SP::Ph1::SSNTypeI2T::mnaCompAddPostStepDependencies(
     AttributeBase::List &prevStepDependencies,
     AttributeBase::List &attributeDependencies,
     AttributeBase::List &modifiedAttributes,
@@ -157,13 +156,13 @@ void SP::Ph1::SSNTypeV2T::mnaCompAddPostStepDependencies(
   modifiedAttributes.push_back(mIntfCurrent);
 }
 
-void SP::Ph1::SSNTypeV2T::mnaCompPostStep(Real time, Int timeStepCount,
+void SP::Ph1::SSNTypeI2T::mnaCompPostStep(Real time, Int timeStepCount,
                                           Attribute<Matrix>::Ptr &leftVector) {
   mnaCompUpdateVoltage(**leftVector);
   mnaCompUpdateCurrent(**leftVector);
 }
 
-void SP::Ph1::SSNTypeV2T::mnaCompUpdateVoltage(const Matrix &leftVector) {
+void SP::Ph1::SSNTypeI2T::mnaCompUpdateVoltage(const Matrix &leftVector) {
   // v1 - v0
   (**mIntfVoltage)(0, 0) = 0;
   if (terminalNotGrounded(1))
@@ -175,7 +174,7 @@ void SP::Ph1::SSNTypeV2T::mnaCompUpdateVoltage(const Matrix &leftVector) {
         Math::realFromVectorElement(leftVector, matrixNodeIndex(0));
 }
 
-void SP::Ph1::SSNTypeV2T::mnaCompUpdateCurrent(const Matrix &leftVector) {
+void SP::Ph1::SSNTypeI2T::mnaCompUpdateCurrent(const Matrix &leftVector) {
   **mIntfCurrent = mSusceptance * (**mIntfVoltage);
 }
 
@@ -184,10 +183,6 @@ void CPS::SP::Ph1::SSNTypeI2T::setSSNMatricesToZero() {
   **mB = Matrix::Zero(1, 1);
   **mC = Matrix::Zero(1, 1);
   **mD = Matrix::Zero(1, 1);
-
-  **mdA = Matrix::Zero(1, 1);
-  **mdB = Matrix::Zero(1, 1);
-  **mdC = Matrix::Zero(1, 1);
 
   mX = Matrix::Zero(1, 1);
   mU = Matrix::Zero(1, 1);

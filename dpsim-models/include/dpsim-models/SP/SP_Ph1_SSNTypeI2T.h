@@ -26,21 +26,21 @@ private:
   void setSSNMatricesToZero();
 
 protected:
-  Matrix mX;
-  Matrix mU;
-  Matrix mUOld;
-  Matrix mW;
-  Matrix mYHist;
+  MatrixComp mX;
+  MatrixComp mU;
+  MatrixComp mUOld;
+  MatrixComp mW;
+  MatrixComp mYHist;
   Real mOmega;
 
   /// susceptance [S]
   Complex mSusceptance;
 
 public:
-  const CPS::Attribute<Matrix>::Ptr mA;
-  const CPS::Attribute<Matrix>::Ptr mB;
-  const CPS::Attribute<Matrix>::Ptr mC;
-  const CPS::Attribute<Matrix>::Ptr mD;
+  const CPS::Attribute<MatrixComp>::Ptr mA;
+  const CPS::Attribute<MatrixComp>::Ptr mB;
+  const CPS::Attribute<MatrixComp>::Ptr mC;
+  const CPS::Attribute<MatrixComp>::Ptr mD;
 
   /// Defines UID, name, component parameters and logging level
   SSNTypeI2T(String uid, String name,
@@ -54,8 +54,8 @@ public:
   void manualInit(Matrix initialState, Matrix initialInput,
                   Matrix initialOldInput, Real initCurrent, Real initVoltage);
   // #### General ####
-  void setParameters(const Matrix A, const Matrix B, const Matrix C,
-                     const Matrix D);
+  void setParameters(const MatrixComp A, const MatrixComp B, const MatrixComp C,
+                     const MatrixComp D);
   /// Initializes component from power flow data
   void initializeFromNodesAndTerminals(Real frequency) override;
 

@@ -7,18 +7,19 @@ using namespace CPS;
 
 SP::Ph1::SSNTypeI2T::SSNTypeI2T(String uid, String name, Logger::Level logLevel)
     : MNASimPowerComp<Complex>(uid, name, true, true, logLevel),
-      mA(mAttributes->create<Matrix>("A")),
-      mB(mAttributes->create<Matrix>("B")),
-      mC(mAttributes->create<Matrix>("C")),
-      mD(mAttributes->create<Matrix>("D")) {
+      mA(mAttributes->create<MatrixComp>("A")),
+      mB(mAttributes->create<MatrixComp>("B")),
+      mC(mAttributes->create<MatrixComp>("C")),
+      mD(mAttributes->create<MatrixComp>("D")) {
   setTerminalNumber(2);
   **mIntfVoltage = Matrix::Zero(1, 1);
   **mIntfCurrent = Matrix::Zero(1, 1);
   mParametersSet = false;
 }
 
-void SP::Ph1::SSNTypeI2T::setParameters(const Matrix A, const Matrix B,
-                                        const Matrix C, const Matrix D) {
+void SP::Ph1::SSNTypeI2T::setParameters(const MatrixComp A, const MatrixComp B,
+                                        const MatrixComp C,
+                                        const MatrixComp D) {
   try {
     if (A.cols() != A.rows())
       throw std::invalid_argument(
@@ -167,11 +168,11 @@ void SP::Ph1::SSNTypeI2T::mnaCompUpdateVoltage(const Matrix &leftVector) {
   (**mIntfVoltage)(0, 0) = 0;
   if (terminalNotGrounded(1))
     (**mIntfVoltage)(0, 0) =
-        Math::realFromVectorElement(leftVector, matrixNodeIndex(1));
+        Math::complexFromVectorElement(leftVector, matrixNodeIndex(1));
   if (terminalNotGrounded(0))
     (**mIntfVoltage)(0, 0) =
         (**mIntfVoltage)(0, 0) -
-        Math::realFromVectorElement(leftVector, matrixNodeIndex(0));
+        Math::complexFromVectorElement(leftVector, matrixNodeIndex(0));
 }
 
 void SP::Ph1::SSNTypeI2T::mnaCompUpdateCurrent(const Matrix &leftVector) {

@@ -97,8 +97,24 @@ SimPowerComp<Real>::Ptr EMT::Ph1::SSNTypeI2T::clone(String name) {
 
 void EMT::Ph1::SSNTypeI2T::initializeFromNodesAndTerminals(Real frequency) {
 
-  (**mIntfCurrent)(0, 0) = 0;
-  (**mIntfVoltage)(0, 0) = 0;
+  Real omega = 2 * PI * frequency;
+
+  MatrixComp H_inv =
+      omega * Complex(0, 1.) * Matrix::Identity((**mA).rows(), (**mA).cols()) -
+      **mA;
+
+  MatrixComp H = MatrixComp(H_inv.rows(), H_inv.cols());
+
+  H = H_inv.inverse().eval();
+
+  Complex admittance =
+      1. /
+      (((**mC).eval() * H * (**mB).eval() + (**mD).eval())
+           .value()); //I-type: y=V, x=I ->Matrix factor is reactance, not susceptance
+  Complex voltage =
+      RMS3PH_TO_PEAK1PH * (initialSingleVoltage(1) - initialSingleVoltage(0));
+  (**mIntfVoltage)(0, 0) = voltage.real();
+  (**mIntfCurrent)(0, 0) = (voltage * admittance).real();
 
   SPDLOG_LOGGER_INFO(mSLog,
                      "\n--- Initialization from powerflow ---"
@@ -110,6 +126,7 @@ void EMT::Ph1::SSNTypeI2T::initializeFromNodesAndTerminals(Real frequency) {
                      (**mIntfVoltage)(0, 0), (**mIntfCurrent)(0, 0),
                      (RMS3PH_TO_PEAK1PH * initialSingleVoltage(0)).real(),
                      (RMS3PH_TO_PEAK1PH * initialSingleVoltage(1)).real());
+  mSLog->flush();
 }
 
 void EMT::Ph1::SSNTypeI2T::mnaCompInitialize(

@@ -20,7 +20,8 @@ namespace Ph1 {
 /// x represents any component states.
 class SSNTypeI2T : public MNASimPowerComp<Complex>,
                    public SharedFactory<SSNTypeI2T>,
-                   public MNATearInterface {
+                   public MNATearInterface,
+                   public PFSolverInterfaceBranch {
 private:
   void ssnUpdateState();
   void setSSNMatricesToZero();
@@ -33,7 +34,27 @@ protected:
   MatrixComp mYHist;
   Real mOmega;
 
-  /// susceptance [S]
+  /// base apparent power[VA]
+  Real mBaseApparentPower;
+  /// base impedance [ohm]
+  Real mBaseImpedance;
+  /// base admittance [S]
+  Real mBaseAdmittance;
+  /// base voltage [V]
+  Real mBaseVoltage;
+  /// base current [A]
+  Real mBaseCurrent;
+
+  /// Impedance [pu]
+  Complex mImpedancePerUnit;
+  /// Admittance [pu]
+  Complex mAdmittancePerUnit;
+
+  /// Impedance [Ohm]
+  Complex mImpedance;
+  /// Admittance [S]
+  Complex mAdmittance;
+  /// Susceptance [S]
   Complex mSusceptance;
 
 public:
@@ -56,6 +77,15 @@ public:
   // #### General ####
   void setParameters(const MatrixComp A, const MatrixComp B, const MatrixComp C,
                      const MatrixComp D);
+
+  // #### Powerflow section ####
+  /// Set base voltage
+  void setBaseVoltage(Real baseVoltage);
+  /// Initializes component from power flow data
+  void calculatePerUnitParameters(Real baseApparentPower);
+  /// Stamps admittance matrix
+  void pfApplyAdmittanceMatrixStamp(SparseMatrixCompRow &Y) override;
+
   /// Initializes component from power flow data
   void initializeFromNodesAndTerminals(Real frequency) override;
 

@@ -94,6 +94,43 @@ SimPowerComp<Complex>::Ptr SP::Ph1::SSNTypeI2T::clone(String name) {
 void SP::Ph1::SSNTypeI2T::initializeFromNodesAndTerminals(Real frequency) {
 
   mOmega = 2 * PI * frequency;
+
+  MatrixComp H_inv =
+      mOmega * Complex(0, 1.) * Matrix::Identity((**mA).rows(), (**mA).cols()) -
+      **mA;
+
+  MatrixComp H = MatrixComp(H_inv.rows(), H_inv.cols());
+
+  H = H_inv.inverse().eval();
+
+  mSusceptance =
+      1. /
+      (((**mC).eval() * H * (**mB).eval() + (**mD).eval())
+           .value()); //I-type: y=V, x=I ->Matrix factor is reactance, not susceptance
+
+  mImpedance = Complex(1, 0) / mSusceptance;
+  mAdmittance = Complex(1, 0) / mImpedance;
+  (**mIntfVoltage)(0, 0) = initialSingleVoltage(1) - initialSingleVoltage(0);
+  **mIntfCurrent = mSusceptance * **mIntfVoltage;
+
+  SPDLOG_LOGGER_INFO(mSLog,
+                     "\nCapacitance [F]: {:s}"
+                     "\nImpedance [Ohm]: {:s}"
+                     "\nAdmittance [S]: {:s}",
+                     Logger::realToString(**mCapacitance),
+                     Logger::complexToString(mImpedance),
+                     Logger::complexToString(mAdmittance));
+  SPDLOG_LOGGER_INFO(mSLog,
+                     "\n--- Initialization from powerflow ---"
+                     "\nVoltage across: {:s}"
+                     "\nCurrent: {:s}"
+                     "\nTerminal 0 voltage: {:s}"
+                     "\nTerminal 1 voltage: {:s}"
+                     "\n--- Initialization from powerflow finished ---",
+                     Logger::phasorToString((**mIntfVoltage)(0, 0)),
+                     Logger::phasorToString((**mIntfCurrent)(0, 0)),
+                     Logger::phasorToString(initialSingleVoltage(0)),
+                     Logger::phasorToString(initialSingleVoltage(1)));
 }
 
 void SP::Ph1::SSNTypeI2T::mnaCompInitialize(Real omega, Real timeStep,
@@ -113,23 +150,8 @@ void SP::Ph1::SSNTypeI2T::mnaCompInitialize(Real omega, Real timeStep,
       (((**mC).eval() * H * (**mB).eval() + (**mD).eval())
            .value()); //I-type: y=V, x=I ->Matrix factor is reactance, not susceptance
 
-  (**mIntfVoltage)(0, 0) = initialSingleVoltage(1) - initialSingleVoltage(0);
-  **mIntfCurrent = mSusceptance * **mIntfVoltage;
-
   SPDLOG_LOGGER_INFO(mSLog, "\nImpedance [Ohm]: {:s}",
                      Logger::complexToString(1. / mSusceptance));
-  SPDLOG_LOGGER_INFO(mSLog,
-                     "\n--- Initialization from powerflow ---"
-                     "\nVoltage across: {:s}"
-                     "\nCurrent: {:s}"
-                     "\nTerminal 0 voltage: {:s}"
-                     "\nTerminal 1 voltage: {:s}"
-                     "\n--- Initialization from powerflow finished ---",
-                     Logger::phasorToString((**mIntfVoltage)(0, 0)),
-                     Logger::phasorToString((**mIntfCurrent)(0, 0)),
-                     Logger::phasorToString(initialSingleVoltage(0)),
-                     Logger::phasorToString(initialSingleVoltage(1)));
-
   SPDLOG_LOGGER_INFO(mSLog,
                      "\n--- MNA initialization ---"
                      "\nInitial voltage {:s}"
@@ -226,4 +248,48 @@ void SP::Ph1::SSNTypeI2T::manualInit(Matrix initialState, Matrix initialInput,
 // #### Tear Methods ####
 void SP::Ph1::SSNTypeI2T::mnaTearApplyMatrixStamp(SparseMatrixRow &tearMatrix) {
   Math::addToMatrixElement(tearMatrix, mTearIdx, mTearIdx, 1. / mSusceptance);
+}
+
+// #### Powerflow section ####
+
+void SP::Ph1::SSNTypeI2T::setBaseVoltage(Real baseVoltage) {
+  mBaseVoltage = baseVoltage;
+}
+
+void SP::Ph1::SSNTypeI2T::calculatePerUnitParameters(Real baseApparentPower) {
+  SPDLOG_LOGGER_INFO(mSLog, "#### Calculate Per Unit Parameters for {}",
+                     **mName);
+  mBaseApparentPower = baseApparentPower;
+  SPDLOG_LOGGER_INFO(mSLog, "Base Power={} [VA]", baseApparentPower);
+
+  mBaseImpedance = mBaseVoltage * mBaseVoltage / mBaseApparentPower;
+  mBaseAdmittance = 1.0 / mBaseImpedance;
+  mBaseCurrent = baseApparentPower /
+                 (mBaseVoltage *
+                  sqrt(3)); // I_base=(S_threephase/3)/(V_line_to_line/sqrt(3))
+  SPDLOG_LOGGER_INFO(mSLog, "Base Voltage={} [V]  Base Impedance={} [Ohm]",
+                     mBaseVoltage, mBaseImpedance);
+
+  mImpedancePerUnit = mImpedance / mBaseImpedance;
+  mAdmittancePerUnit = 1. / mImpedancePerUnit;
+  SPDLOG_LOGGER_INFO(mSLog, "Impedance={} [pu]  Admittance={} [pu]",
+                     Logger::complexToString(mImpedancePerUnit),
+                     Logger::complexToString(mAdmittancePerUnit));
+}
+
+void SP::Ph1::SSNTypeI2T::pfApplyAdmittanceMatrixStamp(SparseMatrixCompRow &Y) {
+  int bus1 = this->matrixNodeIndex(0);
+
+  if (std::isinf(mAdmittancePerUnit.real()) ||
+      std::isinf(mAdmittancePerUnit.imag())) {
+    std::cout << "Y:" << mAdmittancePerUnit << std::endl;
+    std::stringstream ss;
+    ss << "SSNTypeI2T >>" << this->name()
+       << ": infinite or nan values at node: " << bus1;
+    throw std::invalid_argument(ss.str());
+  }
+
+  //set the circuit matrix values
+  Y.coeffRef(bus1, bus1) += mAdmittancePerUnit;
+  SPDLOG_LOGGER_INFO(mSLog, "#### Y matrix stamping: {}", mAdmittancePerUnit);
 }

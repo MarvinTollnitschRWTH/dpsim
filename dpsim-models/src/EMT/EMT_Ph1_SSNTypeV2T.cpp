@@ -96,8 +96,22 @@ SimPowerComp<Real>::Ptr EMT::Ph1::SSNTypeV2T::clone(String name) {
 
 void EMT::Ph1::SSNTypeV2T::initializeFromNodesAndTerminals(Real frequency) {
 
-  (**mIntfCurrent)(0, 0) = 0;
-  (**mIntfVoltage)(0, 0) = 0;
+  Real omega = 2 * PI * frequency;
+
+  MatrixComp H_inv =
+      omega * Complex(0, 1.) * Matrix::Identity((**mA).rows(), (**mA).cols()) -
+      **mA;
+
+  MatrixComp H = MatrixComp(H_inv.rows(), H_inv.cols());
+
+  H = H_inv.inverse().eval();
+
+  admittance = ((**mC).eval() * H * (**mB).eval() + (**mD).eval()).value();
+
+  Complex voltage =
+      RMS3PH_TO_PEAK1PH * (initialSingleVoltage(1) - initialSingleVoltage(0));
+  (**mIntfVoltage)(0, 0) = voltage.real();
+  (**mIntfCurrent)(0, 0) = (voltage * admittance).real();
 
   SPDLOG_LOGGER_INFO(mSLog,
                      "\n--- Initialization from powerflow ---"

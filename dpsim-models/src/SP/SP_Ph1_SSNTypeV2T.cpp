@@ -94,11 +94,6 @@ SimPowerComp<Complex>::Ptr SP::Ph1::SSNTypeV2T::clone(String name) {
 void SP::Ph1::SSNTypeV2T::initializeFromNodesAndTerminals(Real frequency) {
 
   mOmega = 2 * PI * frequency;
-}
-
-void SP::Ph1::SSNTypeV2T::mnaCompInitialize(Real omega, Real timeStep,
-                                            Attribute<Matrix>::Ptr leftVector) {
-  updateMatrixNodeIndices();
 
   MatrixComp H_inv =
       mOmega * Complex(0, 1.) * Matrix::Identity((**mA).rows(), (**mA).cols()) -
@@ -126,7 +121,24 @@ void SP::Ph1::SSNTypeV2T::mnaCompInitialize(Real omega, Real timeStep,
                      Logger::phasorToString((**mIntfCurrent)(0, 0)),
                      Logger::phasorToString(initialSingleVoltage(0)),
                      Logger::phasorToString(initialSingleVoltage(1)));
+}
 
+void SP::Ph1::SSNTypeV2T::mnaCompInitialize(Real omega, Real timeStep,
+                                            Attribute<Matrix>::Ptr leftVector) {
+  updateMatrixNodeIndices();
+
+  MatrixComp H_inv =
+      mOmega * Complex(0, 1.) * Matrix::Identity((**mA).rows(), (**mA).cols()) -
+      **mA;
+
+  MatrixComp H = MatrixComp(H_inv.rows(), H_inv.cols());
+
+  H = H_inv.inverse().eval();
+
+  mSusceptance = ((**mC).eval() * H * (**mB).eval() + (**mD).eval()).value();
+
+  SPDLOG_LOGGER_INFO(mSLog, "\nImpedance [Ohm]: {:s}",
+                     Logger::complexToString(1. / mSusceptance));
   SPDLOG_LOGGER_INFO(mSLog,
                      "\n--- MNA initialization ---"
                      "\nInitial voltage {:s}"

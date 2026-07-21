@@ -114,10 +114,8 @@ void SP::Ph1::SSNTypeI2T::initializeFromNodesAndTerminals(Real frequency) {
   **mIntfCurrent = mSusceptance * **mIntfVoltage;
 
   SPDLOG_LOGGER_INFO(mSLog,
-                     "\nCapacitance [F]: {:s}"
                      "\nImpedance [Ohm]: {:s}"
                      "\nAdmittance [S]: {:s}",
-                     Logger::realToString(**mCapacitance),
                      Logger::complexToString(mImpedance),
                      Logger::complexToString(mAdmittance));
   SPDLOG_LOGGER_INFO(mSLog,

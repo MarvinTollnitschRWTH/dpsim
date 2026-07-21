@@ -106,7 +106,8 @@ void EMT::Ph1::SSNTypeV2T::initializeFromNodesAndTerminals(Real frequency) {
 
   H = H_inv.inverse().eval();
 
-  admittance = ((**mC).eval() * H * (**mB).eval() + (**mD).eval()).value();
+  Complex admittance =
+      ((**mC).eval() * H * (**mB).eval() + (**mD).eval()).value();
 
   Complex voltage =
       RMS3PH_TO_PEAK1PH * (initialSingleVoltage(1) - initialSingleVoltage(0));
@@ -115,8 +116,7 @@ void EMT::Ph1::SSNTypeV2T::initializeFromNodesAndTerminals(Real frequency) {
 
   SPDLOG_LOGGER_INFO(mSLog,
                      "\n--- Initialization from powerflow ---"
-                     "\nVoltage across: {:f}"
-                     "\nCurrent: {:f}"
+                     "\nVoltage across: {:f}" S "\nCurrent: {:f}"
                      "\nTerminal 0 voltage: {:f}"
                      "\nTerminal 1 voltage: {:f}"
                      "\n--- Initialization from powerflow finished ---",

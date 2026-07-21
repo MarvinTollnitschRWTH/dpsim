@@ -5,6 +5,7 @@
 
 #include <dpsim-models/MNASimPowerComp.h>
 #include <dpsim-models/Solver/MNATearInterface.h>
+#include <dpsim-models/Solver/PFSolverInterfaceBranch.h>
 
 namespace CPS {
 namespace SP {

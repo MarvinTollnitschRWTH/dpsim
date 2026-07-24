@@ -1,0 +1,410 @@
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>DPsim – Concepts</title><link>https://sogno-platform.github.io/dpsim/docs/concepts/</link><description>Recent content in Concepts on DPsim</description><generator>Hugo -- gohugo.io</generator><atom:link href="https://sogno-platform.github.io/dpsim/docs/concepts/index.xml" rel="self" type="application/rss+xml"/><item><title>Docs: State-Space Nodal</title><link>https://sogno-platform.github.io/dpsim/docs/concepts/state-space-nodal/</link><pubDate>Tue, 23 Jun 2026 00:00:00 +0000</pubDate><guid>https://sogno-platform.github.io/dpsim/docs/concepts/state-space-nodal/</guid><description>
+&lt;p>The state-space nodal (SSN) method represents a component by its own continuous
+state-space model and couples it to the network through the nodal admittance
+matrix. A component is described by&lt;/p>
+&lt;div class="math">$$\frac{d\mathbf{x}}{dt} = \mathbf{A}\mathbf{x} + \mathbf{B}\mathbf{u},
+\qquad
+\mathbf{y} = \mathbf{C}\mathbf{x} + \mathbf{D}\mathbf{u},$$&lt;/div>&lt;p>where $\mathbf{x}$ is the internal state, and the input $\mathbf{u}$ and output
+$\mathbf{y}$ are the terminal quantities exchanged with the network (a voltage and
+the corresponding current). Trapezoidal discretisation of $(\mathbf{A}, \mathbf{B})$
+yields a discrete model $(\mathbf{A}_d, \mathbf{B}_d)$ and a Norton equivalent: a
+constant conductance $\mathbf{W}$ stamped into the system matrix plus a history
+current source recomputed each step from the previous state and input. Because the
+component is solved simultaneously with the network in the same nodal system, SSN
+is numerically robust without the parasitic snubbers that delayed
+current-injection schemes require.&lt;/p>
+&lt;p>This builds directly on &lt;a href="https://sogno-platform.github.io/dpsim/docs/concepts/nodal-analysis/">Nodal Analysis&lt;/a> and is
+the companion of
+&lt;a href="https://sogno-platform.github.io/dpsim/docs/concepts/state-space-extraction-theory/">State-Space Extraction&lt;/a>, which
+recovers a state-space model from an MNA simulation rather than starting from one.&lt;/p>
+&lt;h1 id="shift-to-the-dynamic-phasor-envelope">Shift to the Dynamic-Phasor Envelope&lt;/h1>
+&lt;p>In the &lt;a href="https://sogno-platform.github.io/dpsim/docs/concepts/dyn-phasors/">Dynamic Phasors&lt;/a> (shifted-frequency)
+domain a physical quantity is written as a slowly varying complex envelope on a
+carrier $\omega_s$,&lt;/p>
+&lt;div class="math">$$x(t) = \operatorname{Re}\{\, X(t)\, e^{j \omega_s t} \,\},$$&lt;/div>&lt;p>so that differentiation maps to
+$\frac{dx}{dt} \rightarrow \frac{dX}{dt} + j \omega_s X$. The physical
+state-space model therefore becomes, for the envelope,&lt;/p>
+&lt;div class="math">$$\frac{d\mathbf{X}}{dt} = (\mathbf{A} - j \omega_s \mathbf{I})\,\mathbf{X}
++ \mathbf{B}\,\mathbf{U}.$$&lt;/div>&lt;p>DPsim does not solve the dynamic-phasor system as a complex matrix: every
+complex admittance $g = g_r + j g_i$ is stamped as a real $2 \times 2$ block
+$\left[\begin{smallmatrix} g_r &amp;amp; -g_i \ g_i &amp;amp; g_r \end{smallmatrix}\right]$, with the real
+and imaginary node parts living in separate halves of a real-valued system. The
+DP-SSN model matches this by carrying the envelope in real/imaginary-split form
+$[\mathbf{X}_r; \mathbf{X}_i]$ and writing the carrier shift explicitly as a real
+augmented model,&lt;/p>
+&lt;div class="math">$$\mathbf{A}_\text{aug} =
+\begin{bmatrix} \mathbf{A} &amp; \omega_s \mathbf{I} \\ -\omega_s \mathbf{I} &amp; \mathbf{A} \end{bmatrix},
+\qquad
+\mathbf{B}_\text{aug} = \begin{bmatrix} \mathbf{B} &amp; \mathbf{0} \\ \mathbf{0} &amp; \mathbf{B} \end{bmatrix}.$$&lt;/div>&lt;p>The same real trapezoidal discretisation used by the EMT SSN models then applies
+unchanged, the Norton conductance comes out as a real block that stamps directly
+into the augmented network, and the interface reads and writes the real and
+imaginary node halves directly with no complex assembly. The $\pm \omega_s$
+coupling block is algebraically exact; placing a rotating-frame term inside the
+real state matrix follows the established SSN practice for rotating-machine
+models.&lt;/p>
+&lt;h1 id="components">Components&lt;/h1>
+&lt;p>The single-phase dynamic-phasor SSN models are:&lt;/p>
+&lt;ul>
+&lt;li>&lt;code>Full_Serial_RLC&lt;/code>, a series resistor-inductor-capacitor one-port with a
+hand-derived state-space model, used as the reference component.&lt;/li>
+&lt;li>&lt;code>GenericTwoTerminalVTypeSSN&lt;/code> and &lt;code>GenericTwoTerminalITypeSSN&lt;/code>, which accept a
+user-supplied $(\mathbf{A}, \mathbf{B}, \mathbf{C}, \mathbf{D})$ and build the
+V-type (voltage input, current output) or I-type (current input, voltage
+output) stamping accordingly.&lt;/li>
+&lt;/ul>
+&lt;p>All three reproduce the classical dynamic-phasor stamping of the same circuit,
+and the reconstructed time-domain waveform matches the EMT and EMT-SSN results
+within discretisation error.&lt;/p>
+&lt;h1 id="three-phase-components">Three-Phase Components&lt;/h1>
+&lt;p>The same real-augmented model extends per phase to &lt;code>DP::Ph3&lt;/code>. The
+$3 \times 3$ $\mathbf{A}$, $\mathbf{B}$, $\mathbf{C}$, $\mathbf{D}$ matrices
+are general, so off-diagonal entries can couple the phases together:&lt;/p>
+&lt;ul>
+&lt;li>&lt;code>Full_Serial_RLC&lt;/code>, the three-phase series RLC one-port.&lt;/li>
+&lt;li>&lt;code>GenericTwoTerminalVTypeSSN&lt;/code> and &lt;code>GenericTwoTerminalITypeSSN&lt;/code>, the
+three-phase generic V-type and I-type components.&lt;/li>
+&lt;/ul>
+&lt;p>As in the single-phase case, all three reproduce the classical three-phase
+dynamic-phasor stamping exactly, and the reconstructed time-domain waveform
+matches the EMT and EMT-SSN results within discretisation error once
+corrected for the RMS-to-peak scaling that &lt;code>EMT::Ph3&lt;/code> sources apply and
+&lt;code>DP::Ph3&lt;/code> sources do not, since the DP envelope already carries the complex
+amplitude directly. The notebooks below only exercise the symmetrical,
+diagonal case; coupling between phases is not covered by existing tests.&lt;/p>
+&lt;h1 id="variable-components">Variable Components&lt;/h1>
+&lt;p>The components above are fixed-parameter LTI systems: $(\mathbf{A}, \mathbf{B},
+\mathbf{C}, \mathbf{D})$ are built once from the component&amp;rsquo;s parameters and never
+change. Some SSN components instead depend on the operating point and are
+relinearized and re-stamped every step (via &lt;code>MNAVariableCompInterface&lt;/code>), the same
+simultaneous nodal solve but around a Jacobian frozen at the previous step&amp;rsquo;s
+converged state rather than a constant matrix. &lt;code>DP::Ph1::AvVoltSourceInverterStateSpace&lt;/code>,
+an averaged grid-following inverter, is one such component, and its three-phase
+analogue &lt;code>DP::Ph3::AvVoltSourceInverterStateSpace&lt;/code> carries a complex envelope per
+phase while sharing a single positive-sequence dq control frame; see
+&lt;a href="https://sogno-platform.github.io/dpsim/docs/models/power-electronics/">Power Electronics&lt;/a> for their state vectors and
+model equations.&lt;/p>
+&lt;h1 id="validation-and-examples">Validation and Examples&lt;/h1>
+&lt;p>Two notebooks accompany the single-phase models, both on a single-carrier
+series RLC one-port. &lt;code>examples/Notebooks/Circuits/DP_generalizedSSN_RLC.ipynb&lt;/code>
+validates the DP-SSN models against the classical dynamic-phasor stamping and
+the EMT and EMT-SSN waveforms. &lt;code>examples/Notebooks/Circuits/DP_SSN_RLC_accuracy.ipynb&lt;/code>
+studies the time-step and frequency-dependent accuracy against a small-step
+EMT reference.&lt;/p>
+&lt;p>The three-phase analogues,
+&lt;code>examples/Notebooks/Circuits/DP_Ph3_generalizedSSN_RLC.ipynb&lt;/code> and
+&lt;code>examples/Notebooks/Circuits/DP_Ph3_SSN_RLC_accuracy.ipynb&lt;/code>, repeat both
+studies on &lt;code>DP::Ph3&lt;/code> circuits, including a current-driven network with generic
+V-type and I-type components and a three-phase fault transient.&lt;/p>
+&lt;h1 id="further-reading">Further Reading&lt;/h1>
+&lt;ul>
+&lt;li>C. Dufour, J. Mahseredjian, and J. Bélanger, &lt;em>A Combined State-Space Nodal Method for the Simulation of Power System Transients&lt;/em>, &lt;em>IEEE Transactions on Power Delivery&lt;/em>, vol. 26, no. 2, pp. 928–935, 2011. &lt;a href="https://doi.org/10.1109/TPWRD.2010.2090364">https://doi.org/10.1109/TPWRD.2010.2090364&lt;/a>&lt;/li>
+&lt;li>C. Dufour and D. S. Nasrallah, &lt;em>State-space-nodal rotating machine models with improved numerical stability&lt;/em>, &lt;em>IECON 2016 – 42nd Annual Conference of the IEEE Industrial Electronics Society&lt;/em>, 2016. &lt;a href="https://doi.org/10.1109/IECON.2016.7793690">https://doi.org/10.1109/IECON.2016.7793690&lt;/a>&lt;/li>
+&lt;li>A. A. Kida, A. C. S. Lima, F. A. Moreira, J. R. Martí, and J. Tarazona, &lt;em>Inaccuracies due to the frequency warping in simulation of electrical systems using combined state–space nodal analysis&lt;/em>, &lt;em>Electric Power Systems Research&lt;/em>, vol. 223, art. 109657, 2023. &lt;a href="https://doi.org/10.1016/j.epsr.2023.109657">https://doi.org/10.1016/j.epsr.2023.109657&lt;/a>&lt;/li>
+&lt;/ul></description></item><item><title>Docs: State-Space Extraction</title><link>https://sogno-platform.github.io/dpsim/docs/concepts/state-space-extraction-theory/</link><pubDate>Thu, 28 May 2026 00:00:00 +0000</pubDate><guid>https://sogno-platform.github.io/dpsim/docs/concepts/state-space-extraction-theory/</guid><description>
+&lt;p>Discrete-time state-space model is extracted from the EMT MNA simulation model. The extracted model is assembled in the form:&lt;/p>
+&lt;div class="math">$$\mathbf{x}[k+1]
+=
+\mathbf{A}_{d,\mathrm{local}} \mathbf{x}[k]
++
+\mathbf{B}_{d,\mathrm{MNA}} \mathbf{x}_{\mathrm{MNA}}[k+1]$$&lt;/div>
+&lt;div class="math">$$\mathbf{Y} \mathbf{x}_{\mathrm{MNA}}[k+1]
+=
+\mathbf{C}_{d,\mathrm{MNA}} \mathbf{x}[k]$$&lt;/div>&lt;p>where:&lt;/p>
+&lt;ul>
+&lt;li>$\mathbf{x}$ is the extraction-state vector,&lt;/li>
+&lt;li>$\mathbf{x}_{\mathrm{MNA}}$ is the full MNA unknown vector,&lt;/li>
+&lt;li>$\mathbf{Y}$ is the active MNA system matrix,&lt;/li>
+&lt;li>$\mathbf{A}_{d,\mathrm{local}}$ contains local component state-transition contributions,&lt;/li>
+&lt;li>$\mathbf{B}_{d,\mathrm{MNA}}$ maps MNA unknowns to the state update,&lt;/li>
+&lt;li>$\mathbf{C}_{d,\mathrm{MNA}}$ maps extraction states to MNA current injections.&lt;/li>
+&lt;/ul>
+&lt;p>Eliminating the MNA unknown vector gives the global discrete-time state matrix&lt;/p>
+&lt;div class="math">$$\mathbf{A}_{d}
+=
+\mathbf{A}_{d,\mathrm{local}}
++
+\mathbf{B}_{d,\mathrm{MNA}}
+\operatorname{solve}
+\left(
+\mathbf{Y},
+\mathbf{C}_{d,\mathrm{MNA}}
+\right)$$&lt;/div>&lt;p>The resulting matrix $\mathbf{A}_{d}$ describes the homogeneous discrete-time dynamics of the EMT MNA simulation model at the current operating point and system-matrix configuration.&lt;/p>
+&lt;h1 id="references">References&lt;/h1>
+&lt;ul>
+&lt;li>J. A. Hollman and J. R. Marti, &lt;em>Step-by-step eigenvalue analysis with EMTP discrete-time solutions&lt;/em>, &lt;em>IEEE Transactions on Power Systems&lt;/em>, 2010. &lt;a href="https://doi.org/10.1109/TPWRS.2009.2039810">https://doi.org/10.1109/TPWRS.2009.2039810&lt;/a>&lt;/li>
+&lt;li>Y. Han, H. Sun, B. Huang, S. Qin, M. Mu, and Y. Yu, “Discrete-Time State-Space Construction Method for SSO Analysis of Renewable Power Generation Integrated AC/DC Hybrid System,” &lt;em>IEEE Transactions on Power Systems&lt;/em>, 2022. &lt;a href="https://doi.org/10.1109/TPWRS.2021.3115248">https://doi.org/10.1109/TPWRS.2021.3115248&lt;/a>&lt;/li>
+&lt;/ul></description></item><item><title>Docs: Dynamic Phasors</title><link>https://sogno-platform.github.io/dpsim/docs/concepts/dyn-phasors/</link><pubDate>Wed, 18 Mar 2020 00:00:00 +0000</pubDate><guid>https://sogno-platform.github.io/dpsim/docs/concepts/dyn-phasors/</guid><description>
+&lt;p>In the power systems community, dynamic phasors were initially introduced for power electronics analysis &lt;a href="https://ieeexplore.ieee.org/document/76811">Sanders1991&lt;/a> as a more general approach than state-space averaging.
+They were used to construct efficient models for the dynamics of switching gate phenomena with a high level of detail as shown in &lt;a href="https://ieeexplore.ieee.org/abstract/document/744524">Mattavelli1999&lt;/a>.
+A few years later, dynamic phasors were also employed for power system simulation as described in &lt;a href="https://www.research-collection.ethz.ch/handle/20.500.11850/123490">Demiray2008&lt;/a>.
+In &lt;a href="https://ieeexplore.ieee.org/document/4026700">Strunz2006&lt;/a> the authors combine the dynamic phasor approach with the Electromagnetic Transients Program (EMTP) simulator concept which includes Modified Nodal Analysis (MNA).
+Further research topics include fault and stability analysis under unbalanced conditions as presented in &lt;a href="https://ieeexplore.ieee.org/document/871734">Stankovic2000&lt;/a> and also rotating machine models have been developed in dynamic phasors &lt;a href="https://ieeexplore.ieee.org/document/4282063">Zhang 2007&lt;/a>.&lt;/p>
+&lt;h1 id="bandpass-signals-and-baseband-representation">Bandpass Signals and Baseband Representation&lt;/h1>
+&lt;p>Although here, dynamic phasors are presented as a power system modelling tool, it should be noted that the concept is also known in other domains, for example, microwave and communications engineering &lt;a href="https://ieeexplore.ieee.org/document/9100822">Maas2003&lt;/a>, &lt;a href="https://ieeexplore.ieee.org/book/5236646">Suarez2009&lt;/a>, &lt;a href="https://isbnsearch.org/isbn/9780471697909">Haykin2009&lt;/a>, &lt;a href="https://isbnsearch.org/isbn/0131589326">Proakis2001&lt;/a>.
+In these domains, the approach is often denoted as base band representation or complex envelope.
+Another common term coming from power electrical engineering is shifted frequency analysis (SFA).
+In the following, the general approach of dynamic phasors for power system simulation is explained starting from the idea of bandpass signals.
+This is because the 50 Hz or 60 Hz fundamental and small deviations from it can be seen as such a bandpass signal.
+Futhermore, higher frequencies, for example, generated by power electronics can be modelled in a similar way.&lt;/p></description></item><item><title>Docs: Nodal Analysis</title><link>https://sogno-platform.github.io/dpsim/docs/concepts/nodal-analysis/</link><pubDate>Wed, 18 Mar 2020 00:00:00 +0000</pubDate><guid>https://sogno-platform.github.io/dpsim/docs/concepts/nodal-analysis/</guid><description>
+&lt;script src="https://polyfill.io/v3/polyfill.min.js?features=es6">&lt;/script>
+&lt;script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js">&lt;/script>
+&lt;p>A circuit with $b$ branches has $2b$ unknowns since there are $b$ voltages and $b$ currents.
+Hence, $2b$ linear independent equations are required to solve the circuit.
+If the circuit has $n$ nodes and $b$ branches, it has&lt;/p>
+&lt;ul>
+&lt;li>Kirchoff&amp;rsquo;s current law (KCL) equations&lt;/li>
+&lt;li>Kirchoff&amp;rsquo;s voltage law (KVL) equations&lt;/li>
+&lt;li>Characteristic equations (Ohm&amp;rsquo;s Law)&lt;/li>
+&lt;/ul>
+&lt;p>There are only $n-1$ KCLs since the nth equation is a linear combination of the remaining $n-1$.
+At the same time, it can be demonstrated that if we can imagine a very high number of closed paths in the network, only $b-n+1$ are able to provide independent KVLs.
+Finally there are $b$ characteristic equations, describing the behavior of the branch, making a total of $2b$ linear independent equations.&lt;/p>
+&lt;p>The nodal analysis method reduces the number of equations that need to be solved simultaneously.
+$n-1$ voltage variables are defined and solved, writing $n-1$ KCL based equations.
+A circuit can be solved using Nodal Analysis as follows&lt;/p>
+&lt;ul>
+&lt;li>Select a reference node (mathematical ground) and number the remaining $n-1$ nodes, that are the independent voltage variables&lt;/li>
+&lt;li>Represent every branch current $i$ as a function of node voltage variables $v$ with the general expression $i = g(v)$&lt;/li>
+&lt;li>Write $n-1$ KCL based equations in terms of node voltage variable.&lt;/li>
+&lt;/ul>
+&lt;p>The resulting equations can be written in matrix form and have to be solved for $v$.&lt;/p>
+&lt;div class="math">$$\boldsymbol{Y} \boldsymbol{v} = \boldsymbol{i}$$&lt;/div></description></item><item><title>Docs: Powerflow</title><link>https://sogno-platform.github.io/dpsim/docs/concepts/powerflow/</link><pubDate>Wed, 18 Mar 2020 00:00:00 +0000</pubDate><guid>https://sogno-platform.github.io/dpsim/docs/concepts/powerflow/</guid><description>
+&lt;p>The power flow problem is about the calculation of voltage magnitudes and angles for one set of buses.
+The solution is obtained from a given set of voltage magnitudes and power levels for a specific model of the network configuration.
+The power flow solution exhibits the voltages and angles at all buses and real and reactive flows can be deduced from the same.&lt;/p>
+&lt;h1 id="power-system-model">Power System Model&lt;/h1>
+&lt;p>Power systems are modeled as a network of buses (nodes) and branches (lines).
+To a network bus, components such a generator, load, and transmission substation can be connected.
+Each bus in the network is fully described by the following four electrical quantities:&lt;/p>
+&lt;ul>
+&lt;li>$\vert V_{k} \vert$: the voltage magnitude&lt;/li>
+&lt;li>$\theta_{k}$: the voltage phase angle&lt;/li>
+&lt;li>$P_{k}$: the active power&lt;/li>
+&lt;li>$Q_{k}$: the reactive power&lt;/li>
+&lt;/ul>
+&lt;p>There are three types of networks buses: VD bus, PV bus and PQ bus.
+Depending on the type of the bus, two of the four electrical quantities are specified as shown in the table below.&lt;/p>
+&lt;table>
+&lt;thead>
+&lt;tr>
+&lt;th>Bus Type&lt;/th>
+&lt;th>Known&lt;/th>
+&lt;th>Unknown&lt;/th>
+&lt;/tr>
+&lt;/thead>
+&lt;tbody>
+&lt;tr>
+&lt;td>$VD$&lt;/td>
+&lt;td>$\vert V_{k} \vert, \theta_{k}$&lt;/td>
+&lt;td>$P_{k}, Q_{k}$&lt;/td>
+&lt;/tr>
+&lt;tr>
+&lt;td>$PV$&lt;/td>
+&lt;td>$P_{k}, \vert V_{k} \vert$&lt;/td>
+&lt;td>$Q_{k}, \theta_{k}$&lt;/td>
+&lt;/tr>
+&lt;tr>
+&lt;td>$PQ$&lt;/td>
+&lt;td>$P_{k}, Q_{k}$&lt;/td>
+&lt;td>$\vert V_{k} \vert, \theta_{k}$&lt;/td>
+&lt;/tr>
+&lt;/tbody>
+&lt;/table>
+&lt;h1 id="single-phase-power-flow-problem">Single Phase Power Flow Problem&lt;/h1>
+&lt;p>The power flow problem can be expressed by the goal to bring a mismatch function $\vec{f}$ to zero.
+The value of the mismatch function depends on a solution vector $\vec{x}$:&lt;/p>
+&lt;div class="math">$$\vec{f}(\vec{x}) = 0$$&lt;/div>&lt;p>As $\vec{f}(\vec{x})$ will be nonlinear, the equation system will be solved with Newton-Raphson:&lt;/p>
+&lt;div class="math">$$-\textbf{J}(\vec{x}) \Delta \vec{x} = \vec{f} (\vec{x})$$&lt;/div>&lt;p>where $\Delta \vec{x}$ is the correction of the solution vector and $\textbf{J}(\vec{x})$ is the Jacobian matrix.
+The solution vector $\vec{x}$ represents the voltage $\vec{V}$ by polar or cartesian quantities.
+The mismatch function $\vec{f}$ will either represent the power mismatch $\Delta \vec{S}$ in terms of&lt;/p>
+&lt;div class="math">$$\left [ \begin{array}{c} \Delta \vec{P} \\ \Delta \vec{Q} \end{array} \right ]$$&lt;/div>&lt;p>or the current mismatch $\Delta \vec{I}$ in terms of&lt;/p>
+&lt;div class="math">$$\left [ \begin{array}{c} \Delta \vec{I_{real}} \\ \Delta \vec{I_{imag}} \end{array} \right ]$$&lt;/div>&lt;p>where the vectors split the complex quantities into real and imaginary parts.
+Futhermore, the solution vector $\vec{x}$ will represent $\vec{V}$ either by polar coordinates&lt;/p>
+&lt;div class="math">$$\left [ \begin{array}{c} \vec{\delta} \\ \vert \vec{V} \vert \end{array} \right ]$$&lt;/div>&lt;p>or rectangular coordinates&lt;/p>
+&lt;div class="math">$$\left [ \begin{array}{c} \vec{V_{real}} \\ \vec{V_{imag}} \end{array} \right ]$$&lt;/div>&lt;p>This results in four different formulations of the powerflow problem:&lt;/p>
+&lt;ul>
+&lt;li>with power mismatch function and polar coordinates&lt;/li>
+&lt;li>with power mismatch function and rectangular coordinates&lt;/li>
+&lt;li>with current mismatch function and polar coordinates&lt;/li>
+&lt;li>with current mismatch function and rectangular coordinates&lt;/li>
+&lt;/ul>
+&lt;p>To solve the problem using NR, we need to formulate $\textbf{J} (\vec{x})$ and $\vec{f} (\vec{x})$ for each powerflow problem formulation.&lt;/p>
+&lt;p>Of these four, DPsim currently implements the &lt;strong>power mismatch function with polar
+coordinates&lt;/strong>, detailed below. It is the formulation used by both the dense
+(&lt;code>PFSolverPowerPolar&lt;/code>) and sparse (&lt;code>PFSolverPowerPolarSparse&lt;/code>) solvers; the other three
+are not implemented.&lt;/p>
+&lt;h2 id="powerflow-problem-with-power-mismatch-function-and-polar-coordinates">Powerflow Problem with Power Mismatch Function and Polar Coordinates&lt;/h2>
+&lt;h3 id="formulation-of-mismatch-function">Formulation of Mismatch Function&lt;/h3>
+&lt;p>The injected power at a node $k$ is given by:&lt;/p>
+&lt;div class="math">$$S_{k} = V_{k} I _{k}^{*}$$&lt;/div>&lt;p>The current injection into any bus $k$ may be expressed as:&lt;/p>
+&lt;div class="math">$$I_{k} = \sum_{j=1}^{N} Y_{kj} V_{j}$$&lt;/div>&lt;p>Substitution yields:&lt;/p>
+&lt;div class="math">$$\begin{align}
+S_{k} &amp;= V_{k} \left ( \sum_{j=1}^{N} Y_{kj} V_{j} \right )^{*} \nonumber \\
+&amp;= V_{k} \sum_{j=1}^{N} Y_{kj}^{*} V_{j} ^{*} \nonumber
+\end{align}$$&lt;/div>&lt;p>We may define $G_{kj}$ and $B_{kj}$ as the real and imaginary parts of the admittance matrix element $Y_{kj}$ respectively, so that $Y_{kj} = G_{kj} + jB_{kj}$.
+Then we may rewrite the last equation:&lt;/p>
+&lt;div class="math">$$\begin{align}
+S_{k} &amp;= V_{k} \sum_{j=1}^{N} Y_{kj}^{*} V_{j}^{*} \nonumber \\
+&amp;= \vert V_{k} \vert \angle \theta_{k} \sum_{j=1}^{N} (G_{kj} + jB_{kj})^{*} ( \vert V_{j} \vert \angle \theta_{j})^{*} \nonumber \\
+&amp;= \vert V_{k} \vert \angle \theta_{k} \sum_{j=1}^{N} (G_{kj} - jB_{kj}) ( \vert V_{j} \vert \angle - \theta_{j}) \nonumber \\
+&amp;= \sum_{j=1} ^{N} \vert V_{k} \vert \angle \theta_{k} ( \vert V_{j} \vert \angle - \theta_{j}) (G_{kj} - jB_{kj}) \nonumber \\
+&amp;= \sum_{j=1} ^{N} \left ( \vert V_{k} \vert \vert V_{j} \vert \angle (\theta_{k} - \theta_{j}) \right ) (G_{kj} - jB_{kj}) \nonumber \\
+&amp;= \sum_{j=1} ^{N} \vert V_{k} \vert \vert V_{j} \vert \left ( cos(\theta_{k} - \theta_{j}) + jsin(\theta_{k} - \theta_{j}) \right ) (G_{kj} - jB_{kj})
+\end{align}$$&lt;/div>&lt;p>If we now perform the algebraic multiplication of the two terms inside the parentheses, and collect real and imaginary parts, and recall that $S_{k} = P_{k} + jQ_{k}$, we can express (1) as two equations: one for the real part, $P_{k}$, and one for the imaginary part, $Q_{k}$, according to:&lt;/p>
+&lt;div class="math">$$\begin{align}
+{P}_{k} = \sum_{j=1}^{N} \vert V_{k} \vert \vert V_{j} \vert \left ( G_{kj}cos(\theta_{k} - \theta_{j}) + B_{kj} sin(\theta_{k} - \theta_{j}) \right ) \\
+{Q}_{k} = \sum_{j=1}^{N} \vert V_{k} \vert \vert V_{j} \vert \left ( G_{kj}sin(\theta_{k} - \theta_{j}) - B_{kj} cos(\theta_{k} - \theta_{j}) \right )
+\end{align}$$&lt;/div>&lt;p>These equations are called the power flow equations, and they form the fundamental building block from which we solve the power flow problem.&lt;/p>
+&lt;p>We consider a power system network having $N$ buses. We assume one VD bus, $N_{PV}-1$ PV buses and $N-N_{PV}$ PQ buses.
+We assume that the VD bus is numbered bus $1$, the PV buses are numbered $2,&amp;hellip;,N_{PV}$, and the PQ buses are numbered $N_{PV}+1,&amp;hellip;,N$.
+We define the vector of unknown as the composite vector of unknown angles $\vec{\theta}$ and voltage magnitudes $\vert \vec{V} \vert$:&lt;/p>
+&lt;div class="math">$$\begin{align}
+\vec{x} = \left[ \begin{array}{c} \vec{\theta} \\ \vert \vec{V} \vert \\ \end{array} \right ]
+= \left[ \begin{array}{c} \theta_{2} \\ \theta_{3} \\ \vdots \\ \theta_{N} \\ \vert V_{N_{PV+1}} \vert \\ \vert V_{N_{PV+2}} \vert \\ \vdots \\ \vert V_{N} \vert \end{array} \right]
+\end{align}$$&lt;/div>&lt;p>The right-hand sides of equations (2) and (3) depend on the elements of the unknown vector $\vec{x}$.
+Expressing this dependency more explicitly, we rewrite these equations as:&lt;/p>
+&lt;div class="math">$$\begin{align}
+P_{k} = P_{k} (\vec{x}) \Rightarrow P_{k}(\vec{x}) - P_{k} &amp;= 0 \quad \quad k = 2,...,N \\
+Q_{k} = Q_{k} (\vec{x}) \Rightarrow Q_{k} (\vec{x}) - Q_{k} &amp;= 0 \quad \quad k = N_{PV}+1,...,N
+\end{align}$$&lt;/div>&lt;p>We now define the mismatch vector $\vec{f} (\vec{x})$ as:&lt;/p>
+&lt;div class="math">$$\begin{align}
+\vec{f} (\vec{x}) = \left [ \begin{array}{c} f_{1}(\vec{x}) \\ \vdots \\ f_{N-1}(\vec{x}) \\ ------ \\ f_{N}(\vec{x}) \\ \vdots \\ f_{2N-N_{PV} -1}(\vec{x}) \end{array} \right ]
+= \left [ \begin{array}{c} P_{2}(\vec{x}) - P_{2} \\ \vdots \\ P_{N}(\vec{x}) - P_{N} \\ --------- \\ Q_{N_{PV}+1}(\vec{x}) - Q_{N_{PV}+1} \\ \vdots \\ Q_{N}(\vec{x}) - Q_{N} \end{array} \right]
+= \left [ \begin{array}{c} \Delta P_{2} \\ \vdots \\ \Delta P_{N} \\ ------ \\ \Delta Q_{N_{PV}+1} \\ \vdots \\ \Delta Q_{N} \end{array} \right ]
+= \vec{0}
+\end{align}$$&lt;/div>&lt;p>That is a system of nonlinear equations.
+This nonlinearity comes from the fact that $P_{k}$ and $Q_{k}$ have terms containing products of some of the unknowns and also terms containing trigonometric functions of some the unknowns.&lt;/p>
+&lt;h3 id="formulation-of-jacobian">Formulation of Jacobian&lt;/h3>
+&lt;p>As discussed in the previous section, the power flow problem will be solved using the Newton-Raphson method. Here, the Jacobian matrix is obtained by taking all first-order partial derivates of the power mismatch functions with respect to the voltage angles $\theta_{k}$ and magnitudes $\vert V_{k} \vert$ as:&lt;/p>
+&lt;div class="math">$$\begin{align}
+J_{jk}^{P \theta} &amp;= \frac{\partial P_{j} (\vec{x} ) } {\partial \theta_{k}} = \vert V_{j} \vert \vert V_{k} \vert \left ( G_{jk} sin(\theta_{j} - \theta_{k}) - B_{jk} cos(\theta_{j} - \theta_{k} ) \right ) \\
+J_{jj}^{P \theta} &amp;= \frac{\partial P_{j}(\vec{x})}{\partial \theta_{j}} = -Q_{j} (\vec{x} ) - B_{jj} \vert V_{j} \vert ^{2} \\
+J_{jk}^{Q \theta} &amp;= \frac{\partial Q_{j}(\vec{x})}{\partial \theta_{k}} = - \vert V_{j} \vert \vert V_{k} \vert \left ( G_{jk} cos(\theta_{j} - \theta_{k}) + B_{jk} sin(\theta_{j} - \theta_{k}) \right ) \\
+J_{jj}^{Q \theta} &amp;= \frac{\partial Q_{j}(\vec{x})}{\partial \theta_{k}} = P_{j} (\vec{x} ) - G_{jj} \vert V_{j} \vert ^{2} \\
+J_{jk}^{PV} &amp;= \frac{\partial P_{j} (\vec{x} ) } {\partial \vert V_{k} \vert } = \vert V_{j} \vert \left ( G_{jk} cos(\theta_{j} - \theta_{k}) + B_{jk} sin(\theta_{j} - \theta_{k}) \right ) \\
+J_{jj}^{PV} &amp;= \frac{\partial P_{j}(\vec{x})}{\partial \vert V_{j} \vert } = \frac{P_{j} (\vec{x} )}{\vert V_{j} \vert} + G_{jj} \vert V_{j} \vert \\
+J_{jk}^{QV} &amp;= \frac{\partial Q_{j} (\vec{x} ) } {\partial \vert V_{k} \vert } = \vert V_{j} \vert \left ( G_{jk} sin(\theta_{j} - \theta_{k}) + B_{jk} cos(\theta_{j} - \theta_{k}) \right ) \\
+J_{jj}^{QV} &amp;= \frac{\partial Q_{j}(\vec{x})}{\partial \vert V_{j} \vert } = \frac{Q_{j} (\vec{x} )}{\vert V_{j} \vert} - B_{jj} \vert V_{j} \vert \\
+\end{align}$$&lt;/div>&lt;p>The formulas above use the voltage magnitude $\vert V_k \vert$ as the unknown. The DPsim
+implementation instead uses the &lt;em>relative&lt;/em> voltage increment $\Delta \vert V_k \vert / \vert V_k \vert$,
+which scales every voltage-magnitude column ($J^{PV}$, $J^{QV}$) by $\vert V_k \vert$. For
+example $J_{jj}^{PV}$ becomes $P_j(\vec{x}) + G_{jj} \vert V_j \vert^2$. This is paired with
+the multiplicative voltage update $\vert V_k \vert \leftarrow \vert V_k \vert (1 + \Delta \vert V_k \vert / \vert V_k \vert)$,
+so the solution is identical; only the scaling of the voltage columns differs.&lt;/p>
+&lt;p>The linear system of equations that is solved in every Newton iteration can be written in matrix form as follows:&lt;/p>
+&lt;div class="math">$$\begin{align}
+-\left [ \begin{array}{cccccc}
+\frac{\partial \Delta P_{2} }{\partial \theta_{2}} &amp; \cdots &amp; \frac{\partial \Delta P_{2} }{\partial \theta_{N}} &amp;
+\frac{\partial \Delta P_{2} }{\partial \vert V_{N_{G+1}} \vert} &amp; \cdots &amp; \frac{\partial \Delta P_{2} }{\partial \vert V_{N} \vert} \\
+\vdots &amp; \ddots &amp; \vdots &amp; \vdots &amp; \ddots &amp; \vdots \\
+\frac{\partial \Delta P_{N} }{\partial \theta_{2}} &amp; \cdots &amp; \frac{\partial \Delta P_{N}}{\partial \theta_{N}} &amp;
+\frac{\partial \Delta P_{N}}{\partial \vert V_{N_{G+1}} \vert } &amp; \cdots &amp; \frac{\partial \Delta P_{N}}{\partial \vert V_{N} \vert} \\
+\frac{\partial \Delta Q_{N_{G+1}} }{\partial \theta_{2}} &amp; \cdots &amp; \frac{\partial \Delta Q_{N_{G+1}} }{\partial \theta_{N}} &amp;
+\frac{\partial \Delta Q_{N_{G+1}} }{\partial \vert V_{N_{G+1}} \vert } &amp; \cdots &amp; \frac{\partial \Delta Q_{N_{G+1}} }{\partial \vert V_{N} \vert} \\
+\vdots &amp; \ddots &amp; \vdots &amp; \vdots &amp; \ddots &amp; \vdots \\
+\frac{\partial \Delta Q_{N}}{\partial \theta_{2}} &amp; \cdots &amp; \frac{\partial \Delta Q_{N}}{\partial \theta_{N}} &amp;
+\frac{\partial \Delta Q_{N}}{\partial \vert V_{N_{G+1}} \vert } &amp; \cdots &amp; \frac{\partial \Delta Q_{N}}{\partial \vert V_{N} \vert}
+\end{array} \right ]
+\left [ \begin{array}{c} \Delta \theta_{2} \\ \vdots \\ \Delta \theta_{N} \\ \Delta \vert V_{N_{G+1}} \vert \\ \vdots \\ \Delta \vert V_{N} \vert \end{array} \right ]
+= \left [ \begin{array}{c} \Delta P_{2} \\ \vdots \\ \Delta P_{N} \\ \Delta Q_{N_{G+1}} \\ \vdots \\ \Delta Q_{N} \end{array} \right ]
+\end{align}$$&lt;/div>&lt;h2 id="solution-of-the-problem">Solution of the Problem&lt;/h2>
+&lt;p>The solution update formula is given by:&lt;/p>
+&lt;div class="math">$$\begin{align}
+\vec{x}^{(i+1)} = \vec{x}^{(i)} + \Delta \vec{x}^{(i)} = \vec{x}^{(i)} - \textbf{J}^{-1} \vec{f} (\vec{x}^{(i)})
+\end{align}$$&lt;/div>&lt;p>To sum up, the NR algorithm, for application to the power flow problem is:&lt;/p>
+&lt;ol>
+&lt;li>Set the iteration counter to $i=1$. Use the initial solution $V_{i} = 1 \angle 0^{\circ}$&lt;/li>
+&lt;li>Compute the mismatch vector $\vec{f}({\vec{x}})$ using the power flow equations&lt;/li>
+&lt;li>Perform the following stopping criterion tests:
+&lt;ul>
+&lt;li>If $\vert \Delta P_{i} \vert &amp;lt; \epsilon_{P}$ for all type PQ and PV buses and&lt;/li>
+&lt;li>If $\vert \Delta Q_{i} \vert &amp;lt; \epsilon_{Q}$ for all type PQ&lt;/li>
+&lt;li>Then go to step 6&lt;/li>
+&lt;li>Otherwise, go to step 4.&lt;/li>
+&lt;/ul>
+&lt;/li>
+&lt;li>Evaluate the Jacobian matrix $\textbf{J}^{(i)}$ and compute $\Delta \vec{x}^{(i)}$.&lt;/li>
+&lt;li>Compute the update solution vector $\vec{x}^{(i+1)}$. Return to step 3.&lt;/li>
+&lt;li>Stop.&lt;/li>
+&lt;/ol>
+&lt;h2 id="convergence-and-step-control">Convergence and Step Control&lt;/h2>
+&lt;p>The iteration is governed by two parameters:&lt;/p>
+&lt;ul>
+&lt;li>&lt;strong>Tolerance&lt;/strong> (default $10^{-8}$): the run is converged once every entry of the
+mismatch vector satisfies $\vert f_{i}(\vec{x}) \vert &amp;lt;$ tolerance (an infinity-norm
+test over all $\Delta P$ and $\Delta Q$ components).&lt;/li>
+&lt;li>&lt;strong>Maximum iterations&lt;/strong> (default $20$): an upper bound on the number of Newton steps
+per power flow solve.&lt;/li>
+&lt;/ul>
+&lt;p>To improve robustness far from the solution, the full Newton step is &lt;strong>scaled by a
+single factor&lt;/strong> $\alpha \in (0, 1]$ rather than damped component-wise. The factor is the
+largest value that keeps the per-step changes within fixed bounds:&lt;/p>
+&lt;div class="math">$$\alpha = \min \left( 1,\ \frac{\Delta\theta_{max}}{\max_k \vert \Delta\theta_k \vert},\ \frac{\Delta V_{max}}{\max_k \vert \Delta V_k / V_k \vert} \right)$$&lt;/div>&lt;p>with $\Delta\theta_{max} = 0.2\ \text{rad}$ and $\Delta V_{max} = 0.1\ \text{pu}$. Because
+the whole step is scaled by one factor, the Newton search direction is preserved, so
+$\alpha = 1$ near the solution and quadratic convergence is retained; $\alpha &amp;lt; 1$ only
+bounds large early steps. Voltage magnitudes are updated multiplicatively
+($V_k \leftarrow V_k (1 + \alpha, \Delta V_k / V_k)$), consistent with the relative
+voltage increment used in the Jacobian.&lt;/p>
+&lt;h1 id="solver-implementations">Solver Implementations&lt;/h1>
+&lt;p>DPsim ships two implementations of the Newton-Raphson power flow solver with power
+mismatch and polar coordinates. Both produce identical results (to round-off); they
+differ only in how the Jacobian is stored and factorized:&lt;/p>
+&lt;ul>
+&lt;li>&lt;code>PFSolverPowerPolar&lt;/code> (dense): assembles a dense Jacobian and computes a fresh
+factorization every Newton iteration. This is the default.&lt;/li>
+&lt;li>&lt;code>PFSolverPowerPolarSparse&lt;/code> (sparse): assembles the Jacobian into a sparse matrix
+whose sparsity pattern is fixed (derived once from the network admittance matrix).
+The symbolic factorization (ordering) is analyzed once and reused; only the numeric
+values are recomputed each Newton iteration. The first iteration of every power flow
+solve does a full factorization with pivoting, and subsequent iterations refactorize
+while reusing that ordering (via KLU when available). This scales better on large,
+sparse grids.&lt;/li>
+&lt;/ul>
+&lt;p>The dense solver is used by default. To opt in to the sparse solver:&lt;/p>
+&lt;div class="highlight">&lt;pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;">&lt;code class="language-python" data-lang="python">&lt;span style="display:flex;">&lt;span>&lt;span style="color:#000">sim&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#000">set_pf_solver_use_sparse&lt;/span>&lt;span style="color:#000;font-weight:bold">(&lt;/span>&lt;span style="color:#204a87;font-weight:bold">True&lt;/span>&lt;span style="color:#000;font-weight:bold">)&lt;/span>
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/div>&lt;p>The flag is ignored and the dense solver is used if DPsim was built without a sparse
+linear solver. The benchmark notebook
+&lt;code>examples/Notebooks/Grids/PF_Sparse_vs_Dense.ipynb&lt;/code> runs a range of network sizes both
+ways, verifies the converged voltages match, and compares run time.&lt;/p>
+&lt;h1 id="generator-reactive-power-limits">Generator Reactive Power Limits&lt;/h1>
+&lt;p>A PV bus assumes its generator can produce whatever reactive power the Newton-Raphson
+solution asks for, holding $\vert V_k \vert$ at its setpoint. Real generators cannot: Q
+is bounded by $Q_{min}$ and $Q_{max}$. DPsim can enforce these bounds with a
+bidirectional PV↔PQ outer loop:&lt;/p>
+&lt;ol>
+&lt;li>Run the inner Newton-Raphson solve to convergence (as described above).&lt;/li>
+&lt;li>For every PV bus, compute the generator&amp;rsquo;s actual reactive output. If it exceeds
+$Q_{max}$ or falls below $Q_{min}$, pin the injection at the violated limit and
+convert the bus to PQ.&lt;/li>
+&lt;li>For every bus pinned this way in an earlier pass, check whether the constraint has
+relaxed: if $\vert V_k \vert$ has moved past its original setpoint in the releasing
+direction, restore voltage control and convert the bus back to PV.&lt;/li>
+&lt;li>Repeat from step 1 until no bus switches, an outer-iteration cap is hit, or a
+per-bus switch counter trips (an anti-oscillation guard, since a bus can otherwise
+toggle PV↔PQ indefinitely near the boundary).&lt;/li>
+&lt;/ol>
+&lt;p>Enforcement is opt-in and defaults off, so a system with no limits configured behaves
+exactly as before:&lt;/p>
+&lt;div class="highlight">&lt;pre tabindex="0" style="background-color:#f8f8f8;-moz-tab-size:4;-o-tab-size:4;tab-size:4;">&lt;code class="language-python" data-lang="python">&lt;span style="display:flex;">&lt;span>&lt;span style="color:#000">sim&lt;/span>&lt;span style="color:#ce5c00;font-weight:bold">.&lt;/span>&lt;span style="color:#000">set_pf_solver_enforce_q_limits&lt;/span>&lt;span style="color:#000;font-weight:bold">(&lt;/span>&lt;span style="color:#204a87;font-weight:bold">True&lt;/span>&lt;span style="color:#000;font-weight:bold">)&lt;/span>
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/div>&lt;p>$Q_{min}$/$Q_{max}$ are set per generator via &lt;code>SynchronGenerator.set_parameters(..., q_limit_max=..., q_limit_min=...)&lt;/code>; the defaults are $\pm\infty$ (unlimited).
+Generators sharing a bus have their limits summed. The two limits are enforced
+independently, with no assumption about sign or relative magnitude: asymmetric bounds
+(e.g. $Q_{max}=150$ MVAr, $Q_{min}=-30$ MVAr) and same-sign bounds (e.g. a generator
+restricted to $Q \in [20, 150]$ MVAr, always producing, or $Q \in [-150, -20]$ MVAr,
+always absorbing) are both enforced correctly.&lt;/p>
+&lt;p>&lt;strong>Limitation: no P-dependent capability curve.&lt;/strong> $Q_{min}$ and $Q_{max}$ are constants
+set once per generator, not a function of active power output $P$. A real synchronous
+generator&amp;rsquo;s reactive capability is a &amp;ldquo;D-curve&amp;rdquo; bounded by three physically distinct
+mechanisms: the stator (armature) current limit $\sqrt{P^2+Q^2} \le S_{rated}$, the
+rotor (field) current / heating limit on the over-excited (Q-providing) side, and the
+under-excitation limiter (UEL) / steady-state stability limit on the under-excited
+(Q-absorbing) side. All three tighten as $P$ approaches rated output, and the over- and
+under-excited bounds come from unrelated physical limits, so the true feasible region is
+neither symmetric in $Q$ nor independent of $P$. DPsim does not model this curve; a
+generator&amp;rsquo;s $Q$ headroom is the same regardless of how much $P$ it is producing at the
+time. Flat per-generator limits are a common baseline in power-flow tools generally, so
+this is not a regression, but a P-dependent capability curve is not currently
+implemented.&lt;/p>
+&lt;p>The notebook &lt;code>examples/Notebooks/Grids/PF_Generator_Qlimits.ipynb&lt;/code> validates the
+switching behavior on a small hand-wired case (binding and non-binding limits, dense vs.
+sparse agreement).&lt;/p></description></item></channel></rss>
